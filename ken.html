@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>都道府県ドリル - v1.1</title>
+  <title>都道府県ドリル - v1.2</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
@@ -50,7 +50,7 @@
       </span>
     </div>
 
-    <span class="absolute top-1 right-2 text-[10px] text-blue-200">v1.1</span>
+    <span class="absolute top-1 right-2 text-[10px] text-blue-200">v1.2</span>
 
   </header>
 
@@ -110,6 +110,7 @@
   </div>
 
   <script>
+    // --- コンテキストメニュー（長押しメニュー）のブロック ---
     document.addEventListener('contextmenu', function(e) {
       e.preventDefault();
     }, { passive: false });
@@ -222,6 +223,7 @@
       loadQuestion();
     });
 
+    // --- キャンバス処理 ---
     const canvas = document.getElementById("drawing-pad");
     const ctx = canvas.getContext("2d", { desynchronized: true });
     let isDrawing = false;
@@ -247,7 +249,7 @@
 
     function draw(e) {
       if (e.pointerType !== 'pen') return;
-      e.preventDefault();
+      e.preventDefault(); // ここでもブラウザの標準ジェスチャーをブロック
       if (!isDrawing) return;
       
       const pos = getPointerPos(e);
@@ -257,94 +259,3 @@
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
     }
-
-    function stopDrawing(e) {
-      if (e.pointerType !== 'pen') return;
-      e.preventDefault();
-      isDrawing = false;
-    }
-
-    canvas.addEventListener("pointerdown", startDrawing);
-    canvas.addEventListener("pointermove", draw);
-    canvas.addEventListener("pointerup", stopDrawing);
-    canvas.addEventListener("pointerout", stopDrawing);
-
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function loadQuestion() {
-      const currentPref = prefecturesData[currentIndex];
-      
-      document.getElementById("hint-text").innerText = currentPref.hint;
-      document.getElementById("question-counter").innerText = `第${currentIndex + 1}問`;
-      updateProgressUI();
-      clearCanvas();
-      
-      document.getElementById("btn-show-answer").style.display = "block";
-      document.getElementById("correct-answer-area").classList.add("hidden");
-      document.getElementById("correct-answer-area").classList.remove("flex");
-
-      d3.selectAll(".prefecture").classed("active", false);
-      d3.selectAll(".prefecture").filter(d => d.properties.nam_ja === currentPref.name).classed("active", true);
-    }
-
-    function showAnswer() {
-      const currentPref = prefecturesData[currentIndex];
-      document.getElementById("correct-answer-text").innerText = currentPref.name;
-      
-      document.getElementById("btn-show-answer").style.display = "none";
-      document.getElementById("correct-answer-area").classList.remove("hidden");
-      document.getElementById("correct-answer-area").classList.add("flex");
-    }
-
-    function markMemorized() {
-      const currentPref = prefecturesData[currentIndex];
-      memorizedSet.add(currentPref.name);
-      d3.selectAll(".prefecture").filter(d => d.properties.nam_ja === currentPref.name).classed("memorized", true);
-      nextQuestion();
-    }
-
-    function nextQuestion() {
-      if (memorizedSet.size >= prefecturesData.length) {
-        showFinishScreen();
-        return;
-      }
-      let nextIndex = (currentIndex + 1) % prefecturesData.length;
-      while (memorizedSet.has(prefecturesData[nextIndex].name) && memorizedSet.size < prefecturesData.length) {
-        nextIndex = (nextIndex + 1) % prefecturesData.length;
-      }
-      currentIndex = nextIndex;
-      loadQuestion();
-    }
-
-    function updateProgressUI() {
-      document.getElementById("memorized-counter").innerText = `覚えた: ${memorizedSet.size} / 47`;
-    }
-
-    function showFinishScreen() {
-      updateProgressUI();
-      document.getElementById("quiz-play-area").classList.add("hidden");
-      document.getElementById("quiz-play-area").classList.remove("flex");
-      document.getElementById("quiz-finish-area").classList.remove("hidden");
-      document.getElementById("quiz-finish-area").classList.add("flex");
-      d3.selectAll(".prefecture").classed("active", false);
-    }
-
-    function restartQuiz(force = false) {
-      if (force || confirm("進捗（青く塗った場所）もすべてリセットして最初からやりなおしますか？")) {
-        currentIndex = 0;
-        memorizedSet.clear(); 
-        d3.selectAll(".prefecture").classed("memorized", false);
-        
-        document.getElementById("quiz-play-area").classList.remove("hidden");
-        document.getElementById("quiz-play-area").classList.add("flex");
-        document.getElementById("quiz-finish-area").classList.add("hidden");
-        document.getElementById("quiz-finish-area").classList.remove("flex");
-        
-        loadQuestion();
-      }
-    }
-  </script>
-</body>
-</html>
