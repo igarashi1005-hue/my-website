@@ -3,11 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>都道府県ドリル - ペン特化・細字版</title>
+  <title>都道府県ドリル - ペン特化・誤操作ガード版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    body { font-family: 'UD Digital Kyokasho-tai', 'Yu Mincho', 'Noto Sans JP', sans-serif; }
+    body { 
+      font-family: 'UD Digital Kyokasho-tai', 'Yu Mincho', 'Noto Sans JP', sans-serif; 
+      /* 長押し＆テキスト選択禁止 */
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
     
     .prefecture { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 0.8; transition: fill 0.3s ease; cursor: pointer; }
     .prefecture:hover { opacity: 0.8; }
@@ -94,6 +100,11 @@
   </div>
 
   <script>
+    // --- コンテキストメニュー（長押しメニュー）のブロック ---
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+
     const prefecturesData = [
       { name: "北海道", hint: "じゃがいも、カニ、雪まつり" },
       { name: "青森県", hint: "りんご、ねぶた祭り" },
@@ -208,7 +219,6 @@
     const ctx = canvas.getContext("2d");
     let isDrawing = false;
 
-    // ★ 線の太さを 6 から 3 に変更しました
     ctx.lineWidth = 3; 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
