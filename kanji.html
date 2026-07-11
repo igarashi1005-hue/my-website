@@ -5,45 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>漢字テスト練習アプリ</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 10px; touch-action: none; background-color: #f9f9f9; }
+  body { font-family: sans-serif; text-align: center; padding: 10px; touch-action: none; background-color: #f9f9f9; margin: 0; }
   
   /* 左上のリセットボタン */
   .reset-container { position: absolute; top: 10px; left: 10px; }
-  .reset-btn { padding: 5px 10px; font-size: 12px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #666; }
+  .reset-btn { padding: 6px 12px; font-size: 12px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #666; }
   
-  #question-box { margin-top: 40px; margin-bottom: 10px; }
-  #question { font-size: 24px; font-weight: bold; color: #333; }
-  #hints { font-size: 16px; color: #555; margin: 5px; text-align: left; display: inline-block; }
+  /* 右上のバージョン表記 */
+  .version-container { position: absolute; top: 10px; right: 10px; font-size: 11px; color: #999; }
   
-  #area { display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
-  #canvas { border: 2px solid #333; background: #fff; touch-action: none; border-radius: 8px; }
+  #main-layout { display: flex; flex-direction: column; align-items: center; max-width: 100%; padding: 0 10px; box-sizing: border-box; }
+  
+  #question-box { margin-top: 50px; margin-bottom: 15px; width: 100%; text-align: center; }
+  #question { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 8px; }
+  #hints { font-size: 15px; color: #555; text-align: left; display: inline-block; line-height: 1.5; }
+  
+  /* 手書きキャンバス */
+  #canvas { border: 2px solid #333; background: #fff; touch-action: none; border-radius: 8px; display: block; width: 280px; height: 280px; }
   
   /* 解答・書き順エリア */
-  #answer-area { display: flex; gap: 10px; align-items: center; }
-  #answer-display { font-size: 80px; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; border: 2px dashed #999; background: #fff; color: #d32f2f; font-weight: bold; border-radius: 8px; }
-  #stroke-order-display { width: 150px; height: 150px; border: 2px dashed #999; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #answer-area { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 15px; width: 100%; }
+  #answer-display { font-size: 70px; width: 135px; height: 135px; display: flex; align-items: center; justify-content: center; border: 2px dashed #999; background: #fff; color: #d32f2f; font-weight: bold; border-radius: 8px; }
+  #stroke-order-display { width: 135px; height: 135px; border: 2px dashed #999; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   #stroke-order-display img { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
-  #stroke-order-placeholder { color: #999; font-size: 14px; text-align: center; padding: 10px; }
+  #stroke-order-placeholder { color: #999; font-size: 13px; text-align: center; padding: 5px; }
 
-  .controls { margin-top: 20px; }
-  button { padding: 15px 25px; font-size: 18px; margin: 5px; cursor: pointer; border-radius: 8px; border: none; background: #007bff; color: white; }
+  /* コントロールボタン */
+  .controls { margin-top: 20px; width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .btn-row { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 280px; }
+  button.action-btn { flex: 1; padding: 15px 0; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; color: white; font-weight: bold; }
   .clear { background: #6c757d; }
   .check { background: #28a745; }
+  .next { background: #007bff; width: 100%; max-width: 280px; padding: 15px 0; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; color: white; font-weight: bold; }
 </style>
 </head>
 <body>
 
-<div class="reset-container">
-  <button class="reset-btn" onclick="resetQuiz()">最初に戻る</button>
-</div>
+<div id="main-layout">
+  <div class="reset-container">
+    <button class="reset-btn" onclick="resetQuiz()">最初に戻る</button>
+  </div>
+  
+  <div class="version-container">v1.0.0</div>
 
-<div id="question-box">
-  <div id="question">もんだい 1</div>
-  <div id="hints"></div>
-</div>
+  <div id="question-box">
+    <div id="question">もんだい 1</div>
+    <div id="hints"></div>
+  </div>
 
-<div id="area">
-  <canvas id="canvas" width="300" height="300"></canvas>
+  <canvas id="canvas" width="280" height="280"></canvas>
+
   <div id="answer-area">
     <div id="answer-display">?</div>
     <div id="stroke-order-display">
@@ -51,12 +62,14 @@
       <img id="stroke-order-img" src="" alt="書き順">
     </div>
   </div>
-</div>
 
-<div class="controls">
-  <button class="clear" onclick="clearCanvas()">やりなおし</button>
-  <button class="check" onclick="showAnswer()">こたえを見る</button>
-  <button onclick="nextQuestion()">次の問題へ</button>
+  <div class="controls">
+    <div class="btn-row">
+      <button class="action-btn clear" onclick="clearCanvas()">やりなおし</button>
+      <button class="action-btn check" onclick="showAnswer()">こたえを見る</button>
+    </div>
+    <button class="next" onclick="nextQuestion()">次の問題へ</button>
+  </div>
 </div>
 
 <script>
@@ -99,7 +112,7 @@
     { q: ["[あ]きかんをすてる", "[くう]きをいれかえる", "[から]ぶりでさんしんになる", "[そら]をとぶ"], a: "空", code: "7a7a" },
     { q: ["こうじょうをけん[がく]する", "さんすうを[まな]ぶ", "しょう[がっ]こうにはいる", "てんもん[がく]のはかせ"], a: "学", code: "5b66" },
     { q: ["かだんに[はな]がさく", "[はな]びがあがる", "[はな]びらがちる"], a: "花", code: "82b1" },
-    { q: ["きん[し]たまごをちらす", "かねに[いと]めをつけない", "かいけつの[いと]ぐち"], a: "糸", code: "7糸" }, // 特殊処理用（下部でフォールバック）
+    { q: ["きん[し]たまごをちらす", "かねに[いと]めをつけない", "かいけつの[いと]ぐち"], a: "糸", code: "7糸" },
     { q: ["[こう]ていであそぶ", "てん[こう]せいがくる", "[こう]もんのまえでてをふる"], a: "校", code: "6821" },
     { q: ["ホールに[にゅう]じょうする", "きょうしつに[はい]る", "コップにみずを[い]れる"], a: "入", code: "5165" },
     { q: ["か[しゅ]がうたう", "[しゅ]じゅつをする", "[て]づくりのおかし", "はく[しゅ]かっさい"], a: "手", code: "624b" },
@@ -124,7 +137,7 @@
     { q: ["ねん[ど]であそぶ", "[ど]そくげんきん", "ここの[とち]でとれたやさい", "[つち]からめがでる"], a: "土", code: "571f" },
     { q: ["かんじのよみかたには[おん]よみとくんよみがある", "うつくしい[ね]いろ", "[おん]がくのじゅぎょう", "きょうかしょを[おん]どくする"], a: "音", code: "97f3" },
     { q: ["おまつりのだ[し]", "ひのくる[ま]", "じてん[しゃ]の[しゃ]りん", "かざ[ぐるま]をまわす"], a: "車", code: "8eca" },
-    { q: ["か[りょく]をあげる", "じ[りき]でたちあがる", "[ちから]をこめてひっぱる"], a: "力", code: "529b" },
+    { q: ["か[りょく]をあげる", "じ[りき]でたちあがる", "[ち力]をこめてひっぱる"], a: "力", code: "529b" },
     { q: ["[ゆう]がたにかえる", "[ゆう]はんのにおい", "[ゆう]だちにあう"], a: "夕", code: "5915" },
     { q: ["[ひゃく]えん", "[ひゃく]てんをとる", "[ひゃく]にんいっしゅであそぶ", "[ひゃっ]ぱつ[ひゃく]ちゅう"], a: "百", code: "767e" },
     { q: ["[いち]ばんになる", "[ひと]くちたべる", "にんじんを[いっ]ぽんかう"], a: "一", code: "4e00" },
@@ -151,7 +164,7 @@
   let painting = false;
 
   ctx.strokeStyle = "black";
-  ctx.lineWidth = 12;
+  ctx.lineWidth = 10;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
@@ -173,17 +186,17 @@
   function draw(e) {
     if (!painting) return;
     const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    ctx.lineTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
   }
 
   function clearCanvas() { 
     ctx.clearRect(0, 0, canvas.width, canvas.height); 
     document.getElementById('answer-display').innerText = "?";
-    
-    // 書き順画像の非表示・リセット
     document.getElementById('stroke-order-img').style.display = "none";
     document.getElementById('stroke-order-placeholder').style.display = "block";
   }
@@ -192,18 +205,15 @@
     const currentData = quizData[currentIdx];
     document.getElementById('answer-display').innerText = currentData.a;
     
-    // 書き順アニメーション・画像の読み込み（オープンソースのKanjiVGリソースを活用）
     const imgElement = document.getElementById('stroke-order-img');
     const placeholder = document.getElementById('stroke-order-placeholder');
     
     if (currentData.code && currentData.code !== "7糸") {
-      // Unicodeをもとにした stroke-order 用のSVG画像パスを生成
       const paddedCode = currentData.code.padStart(5, '0');
       imgElement.src = `https://raw.githubusercontent.com/KanjiVG/KanjiVG/master/kanji/${paddedCode}.svg`;
       imgElement.style.display = "block";
       placeholder.style.display = "none";
     } else {
-      // 「糸」など一部例外用
       imgElement.src = `https://raw.githubusercontent.com/KanjiVG/KanjiVG/master/kanji/07cf8.svg`;
       imgElement.style.display = "block";
       placeholder.style.display = "none";
