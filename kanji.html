@@ -10,7 +10,15 @@
   /* 上部のコントロール・ファイル選択エリア */
   .top-controls { margin-top: 10px; width: 100%; display: flex; justify-content: center; }
   .load-btn { padding: 10px 20px; font-size: 16px; background: #9c27b0; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; }
-  #file-input { display: none; }
+
+  /* 問題選択ポップアップメニュー */
+  #file-selector-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+  .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+  .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+  .file-list { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 15px; padding: 5px; }
+  .file-item { padding: 12px; background: #f0f0f0; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; color: #444; border: 1px solid #ddd; text-align: left; }
+  .file-item:active { background: #e0e0e0; }
+  .close-modal-btn { padding: 10px; width: 100%; background: #6c757d; border: none; color: white; border-radius: 6px; font-size: 14px; cursor: pointer; }
 
   /* 左上のコントロールエリア */
   .control-container { position: absolute; top: 60px; left: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
@@ -51,10 +59,20 @@
 </head>
 <body>
 
+<!-- 問題選択ポップアップメニュー -->
+<div id="file-selector-modal" onclick="closeModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-title">もんだい を えらぶ</div>
+    <div class="file-list" id="modal-file-list">
+      <!-- 読み込まれたCSVファイル名がここに並びます -->
+    </div>
+    <button class="close-modal-btn" onclick="closeModal()">とじる</button>
+  </div>
+</div>
+
 <div id="main-layout">
   <div class="top-controls">
-    <button class="load-btn" onclick="triggerFileInput()">もんだいを切りかえる</button>
-    <input type="file" id="file-input" accept=".csv" onchange="loadCSV(event)">
+    <button class="load-btn" onclick="openFileSelector()">もんだいを切りかえる</button>
   </div>
 
   <div class="control-container">
@@ -67,7 +85,7 @@
       <span id="file-name-display">[ なし ]</span>
       <span id="progress-display">しんちょく: 0 / 0</span>
     </div>
-    <div class="version">v1.3.1</div>
+    <div class="version">v1.4.0</div>
   </div>
 
   <div id="question-box">
@@ -96,6 +114,18 @@
 </div>
 
 <script>
+  // サーバー上の /data フォルダ内に配備されているCSVファイルのリストを定義
+  // ※新しく4年生用などを追加した場合は、ここの配列にファイル名（拡張子なし）を追記してください。
+  const csvFiles = [
+    "小学1年生その1",
+    "小学1年生その2",
+    "小学4年生その1",
+    "小学4年生その2",
+    "小学4年生その3",
+    "小学4年生その4",
+    "小学4年生その5"
+  ];
+
   let quizData = [];
   let learnedSet = new Set();
   let activeIndices = [];
@@ -143,49 +173,76 @@
     document.getElementById('stroke-order-placeholder').style.display = "block";
   }
 
-  function triggerFileInput() {
-    document.getElementById('file-input').click();
+  // ポップアップメニューを開き、リストを生成する
+  function openFileSelector() {
+    const listContainer = document.getElementById('modal-file-list');
+    listContainer.innerHTML = ""; // 初期化
+
+    csvFiles.forEach(fileName => {
+      const btn = document.createElement('div');
+      btn.className = "file-item";
+      btn.innerText = fileName;
+      btn.onclick = () => fetchCSVFromServer(fileName);
+      listContainer.appendChild(btn);
+    });
+
+    document.getElementById('file-selector-modal').style.display = "flex";
   }
 
-  function loadCSV(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  function closeModal() {
+    document.getElementById('file-selector-modal').style.display = "none";
+  }
 
-    // 拡張子（.csv）を取り除いたファイル名を取得
-    currentFileName = file.name.replace(/\.[^/.]+$/, "");
+  // サーバー上の /data フォルダから該当のCSVをFetchで取得する処理
+  function fetchCSVFromServer(fileName) {
+    closeModal();
+    currentFileName = fileName;
+    
+    // /data フォルダ配下の対象CSVファイルをリクエスト
+    fetch(`data/${fileName}.csv`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("ファイルが見つからない、またはサーバー制限（CORS）エラーです。");
+        }
+        return response.text();
+      })
+      .then(text => {
+        parseCSVText(text);
+      })
+      .catch(error => {
+        alert("エラー: " + error.message + "\n※HTMLと/dataフォルダが同じサーバーで実行されているか確認してください。");
+      });
+  }
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/);
-      const parsedData = [];
+  // 取得したCSVテキストの解析ロジック
+  function parseCSVText(text) {
+    const lines = text.split(/\r?\n/);
+    const parsedData = [];
 
-      for (let i = 0; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const columns = lines[i].split(',');
-        if (columns.length < 2) continue;
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const columns = lines[i].split(',');
+      if (columns.length < 2) continue;
 
-        const hintsArray = columns[0].split('|');
-        const answer = columns[1].trim();
-        const code = columns[2] ? columns[2].trim() : "";
+      const hintsArray = columns[0].split('|');
+      const answer = columns[1].trim();
+      const code = columns[2] ? columns[2].trim() : "";
 
-        parsedData.push({ q: hintsArray, a: answer, code: code });
-      }
+      parsedData.push({ q: hintsArray, a: answer, code: code });
+    }
 
-      if (parsedData.length === 0) {
-        alert("CSVファイルを読み込めませんでした。");
-        return;
-      }
+    if (parsedData.length === 0) {
+      alert("CSVデータが正しく解析できませんでした。");
+      return;
+    }
 
-      quizData = parsedData.slice(0, 50);
-      
-      learnedSet.clear();
-      rebuildActiveList(true);
-      updateQuestion();
-      
-      alert(`新しいもんだい「${currentFileName}」（${quizData.length}問）を読み込みました！`);
-    };
-    reader.readAsText(file, "UTF-8");
+    // 最大50問制限
+    quizData = parsedData.slice(0, 50);
+    
+    // 問題切り替え時に自動的に覚えた記録を消去
+    learnedSet.clear();
+    rebuildActiveList(true);
+    updateQuestion();
   }
 
   function showAnswer() {
