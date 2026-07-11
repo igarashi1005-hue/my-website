@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>都道府県ドリル - パームリジェクション対応版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: 'UD Digital Kyokasho-tai', 'Yu Mincho', 'Noto Sans JP', sans-serif; }
+    
+    .prefecture { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 0.8; transition: fill 0.3s ease; cursor: pointer; }
+    .prefecture:hover { opacity: 0.8; }
+    .prefecture.memorized { fill: #3b82f6; stroke: #1e3a8a; }
+    .prefecture.active { fill: #ef4444; stroke: #b91c1c; stroke-width: 1.5; opacity: 1; }
+    
+    #drawing-pad {
+      touch-action: none;
+      background-image: 
+        linear-gradient(transparent 49%, #cbd5e1 49%, #cbd5e1 51%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, #cbd5e1 49%, #cbd5e1 51%, transparent 51%);
+      background-size: 100% 100%;
+    }
+  </style>
+</head>
+<body class="bg-blue-50 h-screen flex flex-col overflow-hidden">
+
+  <header class="bg-blue-600 text-white text-center py-2 text-xl font-bold shadow-md z-10 flex justify-between px-6 items-center">
+    <button id="btn-restart" onclick="restartQuiz()" class="text-sm bg-blue-800 hover:bg-blue-900 text-white font-bold py-1 px-3 rounded-md shadow transition">
+      最初に戻る
+    </button>
+    <span>都道府県ドリル（手書き）</span>
+    <div class="flex gap-2">
+      <span id="question-counter" class="text-sm bg-white text-blue-600 px-3 py-1 rounded-full">第1問</span>
+      <span id="memorized-counter" class="text-sm bg-yellow-300 text-blue-900 px-3 py-1 rounded-full border-2 border-yellow-400">
+        覚えた: 0 / 47
+      </span>
+    </div>
+  </header>
+
+  <div class="flex-1 relative bg-blue-100 flex justify-center items-center overflow-hidden border-b-4 border-blue-300">
+    <div id="loading" class="absolute text-lg font-bold text-gray-500">地図を読み込み中...</div>
+    <div id="map-container" class="w-full h-full max-w-2xl relative"></div>
+    <div class="absolute bottom-2 left-2 text-xs text-blue-800 font-bold bg-white/70 px-2 py-1 rounded">
+      💡 地図をタップして問題を選べるよ！
+    </div>
+  </div>
+
+  <div class="bg-white py-2 px-6 text-center shadow-sm z-10">
+    <p class="text-gray-500 text-xs font-bold">💡 ヒント</p>
+    <h2 id="hint-text" class="text-2xl font-bold text-gray-800">...</h2>
+  </div>
+
+  <div class="bg-gray-50 py-4 px-4 flex flex-col items-center justify-start flex-none h-[400px]">
+    
+    <div id="quiz-play-area" class="flex w-full max-w-5xl justify-center gap-10 items-start">
+      
+      <div class="flex flex-col items-center">
+        <div class="flex justify-between w-full mb-1 px-1">
+          <span class="text-sm font-bold text-gray-600">ここにペンで書こう（指では書けません）</span>
+          <button onclick="clearCanvas()" class="text-sm text-gray-500 hover:text-red-500 underline">消しゴム</button>
+        </div>
+        <canvas id="drawing-pad" width="540" height="180" class="border-4 border-gray-400 bg-white rounded-lg shadow-inner cursor-crosshair"></canvas>
+      </div>
+
+      <div class="flex flex-col items-center justify-center w-80">
+        <button id="btn-show-answer" onclick="showAnswer()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-md text-xl w-full transition transform hover:scale-105 mt-6">
+          答えを見る
+        </button>
+        
+        <div id="correct-answer-area" class="hidden flex-col items-center w-full mt-2">
+          <span class="text-sm font-bold text-gray-500">正解は…</span>
+          <div id="correct-answer-text" class="text-5xl font-bold text-red-600 tracking-widest my-1"></div>
+          
+          <div class="flex gap-2 w-full mt-2">
+            <button onclick="markMemorized()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md text-lg transition transform hover:scale-105">
+              ⭕ 覚えた！
+            </button>
+            <button onclick="nextQuestion()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 rounded-xl shadow-md text-sm transition transform hover:scale-105">
+              ❌ まだ(次へ)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="quiz-finish-area" class="hidden flex-col items-center justify-center mt-10">
+      <p class="text-3xl font-bold text-blue-600 mb-4">🎉 日本全国、ぜんぶ覚えた！おめでとう！</p>
+      <button onclick="restartQuiz(true)" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg text-xl transition transform hover:scale-105">
+        最初からもういちど挑戦する
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    const prefecturesData = [
+      { name: "北海道", hint: "じゃがいも、カニ、雪まつり" },
+      { name: "青森県", hint: "りんご、ねぶた祭り" },
+      { name: "岩手県", hint: "わんこそば、南部鉄器" },
+      { name: "宮城県", hint: "牛タン、笹かまぼこ" },
+      { name: "秋田県", hint: "きりたんぽ、なまはげ" },
+      { name: "山形県", hint: "さくらんぼ、将棋の駒" },
+      { name: "福島県", hint: "桃、赤べこ、喜多方ラーメン" },
+      { name: "茨城県", hint: "納豆、ほしいも、メロン" },
+      { name: "栃木県", hint: "いちご、宇都宮ギョーザ" },
+      { name: "群馬県", hint: "キャベツ、草津温泉、焼きまんじゅう" },
+      { name: "埼玉県", hint: "深谷ねぎ、草加せんべい" },
+      { name: "千葉県", hint: "落花生（ピーナッツ）、びわ、成田国際空港" },
+      { name: "東京都", hint: "東京タワー、スカイツリー、もんじゃ焼き" },
+      { name: "神奈川県", hint: "しゅうまい、横浜中華街、箱根温泉" },
+      { name: "新潟県", hint: "お米（コシヒカリ）、笹だんご、日本酒" },
+      { name: "富山県", hint: "ホタルイカ、白エビ、富山の薬売り" },
+      { name: "石川県", hint: "金箔、輪島塗、兼六園" },
+      { name: "福井県", hint: "越前ガニ、恐竜の化石、お箸" },
+      { name: "山梨県", hint: "ぶどう、桃、ほうとう、富士山（北側）" },
+      { name: "長野県", hint: "信州そば、りんご、レタス" },
+      { name: "岐阜県", hint: "さるぼぼ、鵜飼い、白川郷の合掌造り" },
+      { name: "静岡県", hint: "お茶、みかん、うなぎ、富士山（南側）" },
+      { name: "愛知県", hint: "自動車づくり、手羽先、金のしゃちほこ" },
+      { name: "三重県", hint: "松阪牛、伊勢エビ、伊勢神宮" },
+      { name: "滋賀県", hint: "近江牛、琵琶湖、信楽焼" },
+      { name: "京都府", hint: "金閣寺、舞妓さん、宇治茶、八ツ橋" },
+      { name: "大阪府", hint: "たこ焼き、お好み焼き、通天閣" },
+      { name: "兵庫県", hint: "神戸牛、姫路城、明石焼き" },
+      { name: "奈良県", hint: "東大寺の大仏、鹿、柿の葉寿司" },
+      { name: "和歌山県", hint: "みかん、梅干し、高野山" },
+      { name: "鳥取県", hint: "鳥取砂丘、二十世紀梨、らっきょう" },
+      { name: "島根県", hint: "出雲大社、しじみ、石見銀山" },
+      { name: "岡山県", hint: "桃太郎（きびだんご）、マスカット、ジーンズ" },
+      { name: "広島県", hint: "お好み焼き、もみじ饅頭、厳島神社" },
+      { name: "山口県", hint: "ふぐ、秋吉台（カルスト地形）、錦帯橋" },
+      { name: "徳島県", hint: "阿波踊り、すだち、鳴門の渦潮" },
+      { name: "香川県", hint: "讃岐うどん、オリーブ、金刀比羅宮" },
+      { name: "愛媛県", hint: "みかん、道後温泉、今治タオル" },
+      { name: "高知県", hint: "カツオのたたき、よさこい祭り、坂本龍馬" },
+      { name: "福岡県", hint: "辛子明太子、とんこつラーメン、あまおう（いちご）" },
+      { name: "佐賀県", hint: "有田焼・伊万里焼、佐賀牛、佐賀の海苔" },
+      { name: "長崎県", hint: "カステラ、ちゃんぽん、ハウステンボス" },
+      { name: "熊本県", hint: "スイカ、辛子レンコン、熊本城" },
+      { name: "大分県", hint: "温泉（別府・由布院）、かぼす、とり天" },
+      { name: "宮崎県", hint: "マンゴー、チキン南蛮、日向夏" },
+      { name: "鹿児島県", hint: "黒豚、さつまいも、桜島" },
+      { name: "沖縄県", hint: "ゴーヤ、シーサー、ちんすこう、サーターアンダギー" }
+    ];
+
+    let currentIndex = 0;
+    let memorizedSet = new Set();
+
+    // --- 地図の描画処理 ---
+    const width = 800;
+    const height = 600;
+    const svg = d3.select("#map-container").append("svg")
+                  .attr("viewBox", `0 0 ${width} ${height}`)
+                  .attr("width", "100%")
+                  .attr("height", "100%");
+
+    const projectionMain = d3.geoMercator()
+                         .center([137.0, 38.2])
+                         .scale(1500)
+                         .translate([width / 2, height / 2]);
+    const pathMain = d3.geoPath().projection(projectionMain);
+
+    const projectionOkinawa = d3.geoMercator()
+                         .center([127.8, 26.3]) 
+                         .scale(2500) 
+                         .translate([670, 505]); 
+    const pathOkinawa = d3.geoPath().projection(projectionOkinawa);
+
+    d3.json("https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson").then(function(json) {
+      document.getElementById("loading").style.display = "none";
+      
+      svg.append("rect")
+         .attr("x", 550)
+         .attr("y", 420)
+         .attr("width", 240)
+         .attr("height", 170)
+         .attr("fill", "none")
+         .attr("stroke", "#94a3b8")
+         .attr("stroke-width", 2)
+         .attr("stroke-dasharray", "5,5");
+
+      svg.selectAll("path")
+         .data(json.features)
+         .enter()
+         .append("path")
+         .attr("d", d => {
+            if (d.properties.nam_ja === "沖縄県") {
+              return pathOkinawa(d);
+            }
+            return pathMain(d);
+         })
+         .attr("class", "prefecture")
+         .on("click", function(event, d) {
+            const clickedName = d.properties.nam_ja;
+            const targetIndex = prefecturesData.findIndex(p => p.name === clickedName);
+            if (targetIndex !== -1) {
+              currentIndex = targetIndex;
+              loadQuestion();
+            }
+         });
+         
+      loadQuestion();
+    });
+
+    // --- 手書きキャンバスの処理（パームリジェクション対応） ---
+    const canvas = document.getElementById("drawing-pad");
+    const ctx = canvas.getContext("2d");
+    let isDrawing = false;
+
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#1e293b"; 
+
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      // PointerEventの座標取得に統一
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function startDrawing(e) {
+      // ペン以外（指、手のひら、マウス等）の入力を弾く
+      if (e.pointerType !== 'pen') return;
+      
+      e.preventDefault();
+      isDrawing = true;
+      const pos = getPointerPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+      // ペン以外（指、手のひら、マウス等）の入力を弾く
+      if (e.pointerType !== 'pen') return;
+
+      e.preventDefault();
+      if (!isDrawing) return;
+      const pos = getPointerPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function stopDrawing(e) {
+      // ペン以外（指、手のひら、マウス等）の入力を弾く
+      if (e.pointerType !== 'pen') return;
+
+      e.preventDefault();
+      isDrawing = false;
+    }
+
+    // PointerEventのみを監視
+    canvas.addEventListener("pointerdown", startDrawing);
+    canvas.addEventListener("pointermove", draw);
+    canvas.addEventListener("pointerup", stopDrawing);
+    canvas.addEventListener("pointerout", stopDrawing);
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // --- クイズ進行処理 ---
+    function loadQuestion() {
+      const currentPref = prefecturesData[currentIndex];
+      
+      document.getElementById("hint-text").innerText = currentPref.hint;
+      document.getElementById("question-counter").innerText = `第${currentIndex + 1}問`;
+      updateProgressUI();
+      clearCanvas();
+      
+      document.getElementById("btn-show-answer").style.display = "block";
+      document.getElementById("correct-answer-area").classList.add("hidden");
+      document.getElementById("correct-answer-area").classList.remove("flex");
+
+      d3.selectAll(".prefecture").classed("active", false);
+      d3.selectAll(".prefecture").filter(d => d.properties.nam_ja === currentPref.name).classed("active", true);
+    }
+
+    function showAnswer() {
+      const currentPref = prefecturesData[currentIndex];
+      document.getElementById("correct-answer-text").innerText = currentPref.name;
+      
+      document.getElementById("btn-show-answer").style.display = "none";
+      document.getElementById("correct-answer-area").classList.remove("hidden");
+      document.getElementById("correct-answer-area").classList.add("flex");
+    }
+
+    function markMemorized() {
+      const currentPref = prefecturesData[currentIndex];
+      memorizedSet.add(currentPref.name);
+      
+      d3.selectAll(".prefecture").filter(d => d.properties.nam_ja === currentPref.name).classed("memorized", true);
+      
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      if (memorizedSet.size >= prefecturesData.length) {
+        showFinishScreen();
+        return;
+      }
+
+      let nextIndex = (currentIndex + 1) % prefecturesData.length;
+      while (memorizedSet.has(prefecturesData[nextIndex].name) && memorizedSet.size < prefecturesData.length) {
+        nextIndex = (nextIndex + 1) % prefecturesData.length;
+      }
+      
+      currentIndex = nextIndex;
+      loadQuestion();
+    }
+
+    function updateProgressUI() {
+      document.getElementById("memorized-counter").innerText = `覚えた: ${memorizedSet.size} / 47`;
+    }
+
+    function showFinishScreen() {
+      updateProgressUI();
+      document.getElementById("quiz-play-area").classList.add("hidden");
+      document.getElementById("quiz-play-area").classList.remove("flex");
+      document.getElementById("quiz-finish-area").classList.remove("hidden");
+      document.getElementById("quiz-finish-area").classList.add("flex");
+      d3.selectAll(".prefecture").classed("active", false);
+    }
+
+    function restartQuiz(force = false) {
+      if (force || confirm("進捗（青く塗った場所）もすべてリセットして最初からやりなおしますか？")) {
+        currentIndex = 0;
+        memorizedSet.clear(); 
+        d3.selectAll(".prefecture").classed("memorized", false);
+        
+        document.getElementById("quiz-play-area").classList.remove("hidden");
+        document.getElementById("quiz-play-area").classList.add("flex");
+        document.getElementById("quiz-finish-area").classList.add("hidden");
+        document.getElementById("quiz-finish-area").classList.remove("flex");
+        
+        loadQuestion();
+      }
+    }
+  </script>
+</body>
+</html>
