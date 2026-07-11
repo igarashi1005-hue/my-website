@@ -3,323 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>漢字テスト練習アプリ</title>
+<title>漢字テスト練習アプリ v1.4.2</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 10px; touch-action: none; background-color: #f9f9f9; margin: 0; }
+  /* 画面全体で長押し選択やメニューを禁止する対策 */
+  body { 
+    font-family: sans-serif; 
+    text-align: center; 
+    padding: 10px; 
+    touch-action: none; 
+    background-color: #f9f9f9; 
+    margin: 0; 
+    -webkit-touch-callout: none; /* iOS長押しメニュー禁止 */
+    -webkit-user-select: none;   /* Safari選択禁止 */
+    user-select: none;           /* 標準の選択禁止 */
+  }
   
-  /* 上部のコントロール・ファイル選択エリア */
   .top-controls { margin-top: 10px; width: 100%; display: flex; justify-content: center; }
   .load-btn { padding: 10px 20px; font-size: 16px; background: #9c27b0; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; }
-
-  /* 問題選択ポップアップメニュー */
   #file-selector-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-  .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-  .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
-  .file-list { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 15px; padding: 5px; }
-  .file-item { padding: 12px; background: #f0f0f0; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; color: #444; border: 1px solid #ddd; text-align: left; }
-  .file-item:active { background: #e0e0e0; }
-  .close-modal-btn { padding: 10px; width: 100%; background: #6c757d; border: none; color: white; border-radius: 6px; font-size: 14px; cursor: pointer; }
-
-  /* 左上のコントロールエリア */
-  .control-container { position: absolute; top: 60px; left: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
-  .reset-btn { padding: 4px 8px; font-size: 11px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #666; }
-  .forget-btn { padding: 4px 8px; font-size: 11px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 4px; cursor: pointer; color: #c62828; }
+  .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; }
+  .file-item { padding: 12px; background: #f0f0f0; border: 1px solid #ddd; margin-bottom: 8px; border-radius: 6px; cursor: pointer; }
+  .control-container { position: absolute; top: 60px; left: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .status-container { position: absolute; top: 60px; right: 10px; text-align: right; font-size: 12px; color: #666; }
+  #main-layout { display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
   
-  /* 右上のステータスエリア */
-  .status-container { position: absolute; top: 60px; right: 10px; text-align: right; font-size: 12px; color: #666; font-weight: bold; line-height: 1.4; }
-  #file-name-display { color: #9c27b0; margin-right: 8px; display: inline-block; }
-  #progress-display { display: inline-block; }
-  .version { font-size: 10px; color: #999; font-weight: normal; }
+  /* 手書きキャンバス（ここは文字を書くためにタッチアクションを制御） */
+  #canvas { border: 2px solid #333; background: #fff; width: 280px; height: 280px; touch-action: none; }
   
-  #main-layout { display: flex; flex-direction: column; align-items: center; max-width: 100%; padding: 0 10px; box-sizing: border-box; }
-  
-  #question-box { margin-top: 65px; margin-bottom: 15px; width: 100%; text-align: center; }
-  #question { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 8px; }
-  #hints { font-size: 15px; color: #555; text-align: left; display: inline-block; line-height: 1.5; }
-  
-  /* 手書きキャンバス */
-  #canvas { border: 2px solid #333; background: #fff; touch-action: none; border-radius: 8px; display: block; width: 280px; height: 280px; }
-  
-  /* 解答・書き順エリア */
-  #answer-area { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 15px; width: 100%; }
-  #answer-display { font-size: 70px; width: 135px; height: 135px; display: flex; align-items: center; justify-content: center; border: 2px dashed #999; background: #fff; color: #d32f2f; font-weight: bold; border-radius: 8px; }
-  #stroke-order-display { width: 135px; height: 135px; border: 2px dashed #999; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  #stroke-order-display img { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
-  #stroke-order-placeholder { color: #999; font-size: 13px; text-align: center; padding: 5px; }
-
-  /* コントロールボタン */
   .controls { margin-top: 20px; width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-  .btn-row { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 280px; }
-  button.action-btn { flex: 1; padding: 15px 0; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; color: white; font-weight: bold; }
-  .clear { background: #6c757d; }
-  .check { background: #28a745; }
-  .learned { background: #ff9800; }
-  .next { background: #007bff; width: 100%; max-width: 280px; padding: 15px 0; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; color: white; font-weight: bold; }
+  .btn-row { display: flex; gap: 10px; }
+  button.action-btn { padding: 15px 25px; font-size: 16px; border-radius: 8px; border: none; color: white; font-weight: bold; }
 </style>
 </head>
 <body>
-
-<!-- 問題選択ポップアップメニュー -->
-<div id="file-selector-modal" onclick="closeModal()">
+<div id="file-selector-modal" onclick="this.style.display='none'">
   <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-title">もんだい を えらぶ</div>
-    <div class="file-list" id="modal-file-list">
-      <!-- 読み込まれたCSVファイル名がここに並びます -->
-    </div>
-    <button class="close-modal-btn" onclick="closeModal()">とじる</button>
+    <div id="modal-file-list"></div>
   </div>
 </div>
-
 <div id="main-layout">
-  <div class="top-controls">
-    <button class="load-btn" onclick="openFileSelector()">もんだいを切りかえる</button>
-  </div>
-
+  <div class="top-controls"><button class="load-btn" onclick="openFileSelector()">もんだいを切りかえる</button></div>
   <div class="control-container">
-    <button class="reset-btn" onclick="resetQuiz()">最初に戻る</button>
-    <button class="forget-btn" onclick="forgetAll()">覚えたことを忘れる</button>
+    <button onclick="resetQuiz()">最初に戻る</button>
+    <button onclick="forgetAll()">覚えたことを忘れる</button>
   </div>
-  
   <div class="status-container">
-    <div>
-      <span id="file-name-display">[ なし ]</span>
-      <span id="progress-display">しんちょく: 0 / 0</span>
-    </div>
-    <div class="version">v1.4.0</div>
+    <span id="file-name-display">[ なし ]</span><br>
+    <span id="progress-display">しんちょく: 0 / 0</span>
   </div>
-
-  <div id="question-box">
-    <div id="question">もんだい を えらんでね</div>
-    <div id="hints">の上の「もんだいを切りかえる」ボタンから<br>CSVファイルをえらんでください。</div>
-  </div>
-
+  <div id="question-box"><div id="question">もんだいを読み込んでください</div><div id="hints"></div></div>
   <canvas id="canvas" width="280" height="280"></canvas>
-
   <div id="answer-area">
     <div id="answer-display">?</div>
-    <div id="stroke-order-display">
-      <div id="stroke-order-placeholder">書き順</div>
-      <img id="stroke-order-img" src="" alt="書き順">
-    </div>
+    <div id="stroke-order-display"><img id="stroke-order-img" src="" style="display:none; width:130px;"></div>
   </div>
-
   <div class="controls">
     <div class="btn-row">
-      <button class="action-btn clear" onclick="clearCanvas()">やりなおし</button>
-      <button class="action-btn check" onclick="showAnswer()">こたえを見る</button>
-      <button class="action-btn learned" onclick="markAsLearned()">覚えた！</button>
+      <button class="action-btn" style="background:#6c757d" onclick="clearCanvas()">やりなおし</button>
+      <button class="action-btn" style="background:#28a745" onclick="showAnswer()">こたえを見る</button>
+      <button class="action-btn" style="background:#ff9800" onclick="markAsLearned()">覚えた！</button>
     </div>
-    <button class="next" onclick="nextQuestion()">次の問題へ</button>
+    <button class="action-btn" style="background:#007bff; width:280px;" onclick="nextQuestion()">次の問題へ</button>
   </div>
 </div>
-
 <script>
-  // サーバー上の /data フォルダ内に配備されているCSVファイルのリストを定義
-  // ※新しく4年生用などを追加した場合は、ここの配列にファイル名（拡張子なし）を追記してください。
-  const csvFiles = [
-    "小学1年生その1",
-    "小学1年生その2",
-    "小学4年生その1",
-    "小学4年生その2",
-    "小学4年生その3",
-    "小学4年生その4",
-    "小学4年生その5"
-  ];
+  // 長押し時のコンテキストメニュー（システムメニュー）を完全にブロックする
+  window.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
 
-  let quizData = [];
-  let learnedSet = new Set();
-  let activeIndices = [];
-  let currentActivePointer = 0;
-  let currentFileName = "";
-
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  const csvFiles = ["小学1年生その1", "小学1年生その2", "小学4年生その1", "小学4年生その2", "小学4年生その3", "小学4年生その4", "小学4年生その5"];
+  let quizData = [], learnedSet = new Set(), activeIndices = [], currentActivePointer = 0, currentFileName = "";
+  const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
   let painting = false;
-
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 5;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  canvas.addEventListener('pointerdown', (e) => { 
-    if (e.pointerType !== 'pen') return;
-    painting = true; 
-    draw(e); 
-  });
-  canvas.addEventListener('pointerup', () => { 
-    painting = false; 
-    ctx.beginPath(); 
-  });
-  canvas.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'pen') return;
-    draw(e);
-  });
-
+  
+  canvas.addEventListener('pointerdown', (e) => { if(e.pointerType==='pen'){ painting=true; draw(e); }});
+  canvas.addEventListener('pointerup', () => { painting=false; ctx.beginPath(); });
+  canvas.addEventListener('pointermove', (e) => { if(painting && e.pointerType==='pen') draw(e); });
+  
   function draw(e) {
-    if (!painting) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    ctx.lineTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
+    ctx.lineTo((e.clientX - rect.left)*(canvas.width/rect.width), (e.clientY - rect.top)*(canvas.height/rect.height));
+    ctx.stroke(); ctx.beginPath();
   }
-
-  function clearCanvas() { 
-    ctx.clearRect(0, 0, canvas.width, canvas.height); 
-    document.getElementById('answer-display').innerText = "?";
-    document.getElementById('stroke-order-img').style.display = "none";
-    document.getElementById('stroke-order-placeholder').style.display = "block";
-  }
-
-  // ポップアップメニューを開き、リストを生成する
   function openFileSelector() {
-    const listContainer = document.getElementById('modal-file-list');
-    listContainer.innerHTML = ""; // 初期化
-
-    csvFiles.forEach(fileName => {
-      const btn = document.createElement('div');
-      btn.className = "file-item";
-      btn.innerText = fileName;
-      btn.onclick = () => fetchCSVFromServer(fileName);
-      listContainer.appendChild(btn);
+    const list = document.getElementById('modal-file-list'); list.innerHTML = "";
+    csvFiles.forEach(f => {
+      const div = document.createElement('div'); div.className="file-item"; div.innerText=f;
+      div.onclick = () => { closeModal(); fetchCSV(f); }; list.appendChild(div);
     });
-
     document.getElementById('file-selector-modal').style.display = "flex";
   }
-
-  function closeModal() {
-    document.getElementById('file-selector-modal').style.display = "none";
-  }
-
-  // サーバー上の /data フォルダから該当のCSVをFetchで取得する処理
-  function fetchCSVFromServer(fileName) {
-    closeModal();
-    currentFileName = fileName;
-    
-    // /data フォルダ配下の対象CSVファイルをリクエスト
-    fetch(`data/${fileName}.csv`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("ファイルが見つからない、またはサーバー制限（CORS）エラーです。");
-        }
-        return response.text();
-      })
-      .then(text => {
-        parseCSVText(text);
-      })
-      .catch(error => {
-        alert("エラー: " + error.message + "\n※HTMLと/dataフォルダが同じサーバーで実行されているか確認してください。");
+  function closeModal() { document.getElementById('file-selector-modal').style.display = "none"; }
+  function fetchCSV(f) {
+    currentFileName = f;
+    fetch(`data/${f}.csv`).then(r => r.text()).then(t => {
+      quizData = t.split(/\r?\n/).filter(l=>l.trim()).map(l => {
+        const c = l.split(','); return { q: c[0].split('|'), a: c[1].trim(), code: c[2].trim() };
       });
+      learnedSet.clear(); rebuildActiveList(true); updateQuestion();
+    });
   }
-
-  // 取得したCSVテキストの解析ロジック
-  function parseCSVText(text) {
-    const lines = text.split(/\r?\n/);
-    const parsedData = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const columns = lines[i].split(',');
-      if (columns.length < 2) continue;
-
-      const hintsArray = columns[0].split('|');
-      const answer = columns[1].trim();
-      const code = columns[2] ? columns[2].trim() : "";
-
-      parsedData.push({ q: hintsArray, a: answer, code: code });
-    }
-
-    if (parsedData.length === 0) {
-      alert("CSVデータが正しく解析できませんでした。");
-      return;
-    }
-
-    // 最大50問制限
-    quizData = parsedData.slice(0, 50);
-    
-    // 問題切り替え時に自動的に覚えた記録を消去
-    learnedSet.clear();
-    rebuildActiveList(true);
-    updateQuestion();
-  }
-
-  function showAnswer() {
-    if (activeIndices.length === 0) return;
-    const currentData = quizData[activeIndices[currentActivePointer]];
-    document.getElementById('answer-display').innerText = currentData.a;
-    
-    const imgElement = document.getElementById('stroke-order-img');
-    const placeholder = document.getElementById('stroke-order-placeholder');
-    
-    if (currentData.code) {
-      const paddedCode = currentData.code.padStart(5, '0');
-      imgElement.src = `https://raw.githubusercontent.com/KanjiVG/KanjiVG/master/kanji/${paddedCode}.svg`;
-      imgElement.style.display = "block";
-      placeholder.style.display = "none";
-    }
-  }
-
-  function rebuildActiveList(goToFirst) {
-    activeIndices = [];
-    for (let i = 0; i < quizData.length; i++) {
-      if (!learnedSet.has(i)) activeIndices.push(i);
-    }
-    if (goToFirst) currentActivePointer = 0;
-    updateProgressDisplay();
-  }
-
-  function updateProgressDisplay() {
-    document.getElementById('file-name-display').innerText = currentFileName ? `[ ${currentFileName} ]` : "[ なし ]";
+  function rebuildActiveList(first) {
+    activeIndices = quizData.map((_,i)=>i).filter(i => !learnedSet.has(i));
+    if(first) currentActivePointer = 0;
     document.getElementById('progress-display').innerText = `しんちょく: ${learnedSet.size} / ${quizData.length}`;
+    document.getElementById('file-name-display').innerText = `[ ${currentFileName} ]`;
   }
-
-  function markAsLearned() {
-    if (activeIndices.length === 0) return;
-    learnedSet.add(activeIndices[currentActivePointer]);
-    rebuildActiveList(false);
-    if (activeIndices.length === 0) {
-      document.getElementById('question').innerText = "ぜんぶクリア！";
-      document.getElementById('hints').innerHTML = "おめでとう！";
-      clearCanvas();
-    } else {
-      if (currentActivePointer >= activeIndices.length) currentActivePointer = 0;
-      updateQuestion();
-    }
-  }
-
-  function nextQuestion() {
-    if (activeIndices.length === 0) return;
-    currentActivePointer = (currentActivePointer + 1) % activeIndices.length;
-    updateQuestion();
-  }
-
-  function resetQuiz() {
-    if (activeIndices.length === 0) return;
-    currentActivePointer = 0;
-    updateQuestion();
-  }
-
-  function forgetAll() {
-    if (quizData.length === 0) return;
-    if (confirm("きろくを すべて けしますか？")) {
-      learnedSet.clear();
-      rebuildActiveList(true);
-      updateQuestion();
-    }
-  }
-
   function updateQuestion() {
-    if (quizData.length === 0) return;
-    if (activeIndices.length === 0) rebuildActiveList(true);
-    const originalIdx = activeIndices[currentActivePointer];
-    document.getElementById('question').innerText = "もんだい " + (originalIdx + 1);
-    document.getElementById('hints').innerHTML = quizData[originalIdx].q.join("<br>");
+    if(activeIndices.length===0) return;
+    const idx = activeIndices[currentActivePointer];
+    document.getElementById('question').innerText = "もんだい " + (idx + 1);
+    document.getElementById('hints').innerHTML = quizData[idx].q.join("<br>");
     clearCanvas();
   }
-
-  updateProgressDisplay();
+  function showAnswer() {
+    const d = quizData[activeIndices[currentActivePointer]];
+    document.getElementById('answer-display').innerText = d.a;
+    const img = document.getElementById('stroke-order-img');
+    img.src = `https://raw.githubusercontent.com/KanjiVG/KanjiVG/master/kanji/${d.code.padStart(5, '0')}.svg`;
+    img.style.display = "block";
+  }
+  function markAsLearned() {
+    learnedSet.add(activeIndices[currentActivePointer]);
+    rebuildActiveList(false);
+    activeIndices.length > 0 ? updateQuestion() : alert("全問クリア！");
+  }
+  function nextQuestion() { currentActivePointer = (currentActivePointer + 1) % activeIndices.length; updateQuestion(); }
+  function resetQuiz() { currentActivePointer = 0; updateQuestion(); }
+  function forgetAll() { learnedSet.clear(); rebuildActiveList(true); updateQuestion(); }
+  function clearCanvas() { ctx.clearRect(0,0,280,280); ctx.beginPath(); document.getElementById('answer-display').innerText="?"; document.getElementById('stroke-order-img').style.display="none"; }
 </script>
 </body>
 </html>
