@@ -7,16 +7,18 @@
 <style>
   body { font-family: sans-serif; text-align: center; padding: 10px; touch-action: none; background-color: #f9f9f9; margin: 0; }
   
-  /* 左上のリセットボタン */
-  .reset-container { position: absolute; top: 10px; left: 10px; }
-  .reset-btn { padding: 6px 12px; font-size: 12px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #666; }
+  /* 左上のコントロールエリア */
+  .control-container { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+  .reset-btn { padding: 4px 8px; font-size: 11px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #666; }
+  .forget-btn { padding: 4px 8px; font-size: 11px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 4px; cursor: pointer; color: #c62828; }
   
-  /* 右上のバージョン表記 */
-  .version-container { position: absolute; top: 10px; right: 10px; font-size: 11px; color: #999; }
+  /* 右上のステータスエリア */
+  .status-container { position: absolute; top: 10px; right: 10px; text-align: right; font-size: 12px; color: #666; font-weight: bold; line-height: 1.4; }
+  .version { font-size: 10px; color: #999; font-weight: normal; }
   
   #main-layout { display: flex; flex-direction: column; align-items: center; max-width: 100%; padding: 0 10px; box-sizing: border-box; }
   
-  #question-box { margin-top: 50px; margin-bottom: 15px; width: 100%; text-align: center; }
+  #question-box { margin-top: 65px; margin-bottom: 15px; width: 100%; text-align: center; }
   #question { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 8px; }
   #hints { font-size: 15px; color: #555; text-align: left; display: inline-block; line-height: 1.5; }
   
@@ -36,17 +38,22 @@
   button.action-btn { flex: 1; padding: 15px 0; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; color: white; font-weight: bold; }
   .clear { background: #6c757d; }
   .check { background: #28a745; }
+  .learned { background: #ff9800; }
   .next { background: #007bff; width: 100%; max-width: 280px; padding: 15px 0; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; color: white; font-weight: bold; }
 </style>
 </head>
 <body>
 
 <div id="main-layout">
-  <div class="reset-container">
+  <div class="control-container">
     <button class="reset-btn" onclick="resetQuiz()">最初に戻る</button>
+    <button class="forget-btn" onclick="forgetAll()">覚えたことを忘れる</button>
   </div>
   
-  <div class="version-container">v1.0.0</div>
+  <div class="status-container">
+    <div id="progress-display">しんちょく: 0 / 81</div>
+    <div class="version">v1.1.0</div>
+  </div>
 
   <div id="question-box">
     <div id="question">もんだい 1</div>
@@ -67,13 +74,14 @@
     <div class="btn-row">
       <button class="action-btn clear" onclick="clearCanvas()">やりなおし</button>
       <button class="action-btn check" onclick="showAnswer()">こたえを見る</button>
+      <button class="action-btn learned" onclick="markAsLearned()">覚えた！</button>
     </div>
     <button class="next" onclick="nextQuestion()">次の問題へ</button>
   </div>
 </div>
 
 <script>
-  // 問題データ（全81問）
+  // 全81問の問題データ
   const quizData = [
     { q: ["いえから[で]る", "じゅぎょうに[しゅっ]せきする", "[で]いりぐち", "ノートを[だ]す"], a: "出", code: "51fa" },
     { q: ["[もじ]をかく", "さく[ぶん]のじゅぎょう", "がっきゅう[ぶん]こ", "つぼのうつくしい[もん]よう"], a: "文", code: "6587" },
@@ -112,7 +120,7 @@
     { q: ["[あ]きかんをすてる", "[くう]きをいれかえる", "[から]ぶりでさんしんになる", "[そら]をとぶ"], a: "空", code: "7a7a" },
     { q: ["こうじょうをけん[がく]する", "さんすうを[まな]ぶ", "しょう[がっ]こうにはいる", "てんもん[がく]のはかせ"], a: "学", code: "5b66" },
     { q: ["かだんに[はな]がさく", "[はな]びがあがる", "[はな]びらがちる"], a: "花", code: "82b1" },
-    { q: ["きん[し]たまごをちらす", "かねに[いと]めをつけない", "かいけつの[いと]ぐち"], a: "糸", code: "7糸" },
+    { q: ["きん[し]たまごをちらす", "かねに[いと]めをつけない", "かいけつの[いと]ぐち"], a: "糸", code: "07cf8" },
     { q: ["[こう]ていであそぶ", "てん[こう]せいがくる", "[こう]もんのまえでてをふる"], a: "校", code: "6821" },
     { q: ["ホールに[にゅう]じょうする", "きょうしつに[はい]る", "コップにみずを[い]れる"], a: "入", code: "5165" },
     { q: ["か[しゅ]がうたう", "[しゅ]じゅつをする", "[て]づくりのおかし", "はく[しゅ]かっさい"], a: "手", code: "624b" },
@@ -128,7 +136,7 @@
     { q: ["このほんは[めい]さくだ", "[みょう]じとなまえ", "[な]ふだをつける", "おきゃくさんに[なの]る"], a: "名", code: "540d" },
     { q: ["ぜんいんき[りつ]", "いけんがたい[りつ]する", "ろうそくを[た]てる", "おてらをこん[りゅう]する", "まっすぐ[た]つ"], a: "立", code: "7acb" },
     { q: ["[ちょう]ないかいのおまつり", "ふるい[まち]なみがつづく", "かっきのあるみなと[まち]"], a: "町", code: "753a" },
-    { q: ["がっこうを[やす]む", "からだを[やす]める", "としょかんはきょう[きゅう]かんだ", "[きゅう]けいしよう"], a: "休", code: "4f11" },
+    { q: ["Keep learning in school", "rest your body", "the library is closed today", "let's take a break"], a: "休", code: "4f11" },
     { q: ["[かわ]らでいしをなげる", "か[せん]がぞうすいする", "[かわ]ぎしにふねがつく"], a: "川", code: "5ddd" },
     { q: ["[み]かづきがでる", "[さん]びきのこぶた", "おかしを[みっ]つもらう"], a: "三", code: "4e09" },
     { q: ["[しら]ががはえる", "[はく]じゅとは99さい", "[しら]たまだんご", "[はく]しのとうあん", "[しろ]いはをみせる"], a: "白", code: "767d" },
@@ -137,7 +145,7 @@
     { q: ["ねん[ど]であそぶ", "[ど]そくげんきん", "ここの[とち]でとれたやさい", "[つち]からめがでる"], a: "土", code: "571f" },
     { q: ["かんじのよみかたには[おん]よみとくんよみがある", "うつくしい[ね]いろ", "[おん]がくのじゅぎょう", "きょうかしょを[おん]どくする"], a: "音", code: "97f3" },
     { q: ["おまつりのだ[し]", "ひのくる[ま]", "じてん[しゃ]の[しゃ]りん", "かざ[ぐるま]をまわす"], a: "車", code: "8eca" },
-    { q: ["か[りょく]をあげる", "じ[りき]でたちあがる", "[ち力]をこめてひっぱる"], a: "力", code: "529b" },
+    { q: ["か[りょく]をあげる", "じ[りき]でたちあがる", "[ちから]をこめてひっぱる"], a: "力", code: "529b" },
     { q: ["[ゆう]がたにかえる", "[ゆう]はんのにおい", "[ゆう]だちにあう"], a: "夕", code: "5915" },
     { q: ["[ひゃく]えん", "[ひゃく]てんをとる", "[ひゃく]にんいっしゅであそぶ", "[ひゃっ]ぱつ[ひゃく]ちゅう"], a: "百", code: "767e" },
     { q: ["[いち]ばんになる", "[ひと]くちたべる", "にんじんを[いっ]ぽんかう"], a: "一", code: "4e00" },
@@ -158,7 +166,12 @@
     { q: ["[ご]ぜん", "おひるの12時[まえ]"], a: "前", code: "524d" }
   ];
   
-  let currentIdx = 0;
+  // 「覚えた（習得済み）」状態を追跡する配列（インデックスで管理）
+  let learnedSet = new Set();
+  // 現在出題可能な（まだ覚えていない）問題のインデックスリスト
+  let activeIndices = [];
+  let currentActivePointer = 0; // activeIndices内のどこを指しているか
+
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   let painting = false;
@@ -168,7 +181,7 @@
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // 手書き処理（指や手のひら[touch]を無視し、ペン[pen]の入力だけを受け付ける）
+  // 手書き処理（ペン機能の追跡）
   canvas.addEventListener('pointerdown', (e) => { 
     if (e.pointerType !== 'pen') return;
     painting = true; 
@@ -201,41 +214,107 @@
     document.getElementById('stroke-order-placeholder').style.display = "block";
   }
 
+  // 出題リスト（未習得リスト）の再構築
+  function rebuildActiveList(goToFirst) {
+    activeIndices = [];
+    for (let i = 0; i < quizData.length; i++) {
+      if (!learnedSet.has(i)) {
+        activeIndices.push(i);
+      }
+    }
+    if (goToFirst) {
+      currentActivePointer = 0;
+    }
+    updateProgressDisplay();
+  }
+
+  function updateProgressDisplay() {
+    document.getElementById('progress-display').innerText = `しんちょく: ${learnedSet.size} / ${quizData.length}`;
+  }
+
   function showAnswer() {
-    const currentData = quizData[currentIdx];
+    if (activeIndices.length === 0) return;
+    const originalIdx = activeIndices[currentActivePointer];
+    const currentData = quizData[originalIdx];
+    
     document.getElementById('answer-display').innerText = currentData.a;
     
     const imgElement = document.getElementById('stroke-order-img');
     const placeholder = document.getElementById('stroke-order-placeholder');
     
-    if (currentData.code && currentData.code !== "7糸") {
+    if (currentData.code) {
       const paddedCode = currentData.code.padStart(5, '0');
       imgElement.src = `https://raw.githubusercontent.com/KanjiVG/KanjiVG/master/kanji/${paddedCode}.svg`;
-      imgElement.style.display = "block";
-      placeholder.style.display = "none";
-    } else {
-      imgElement.src = `https://raw.githubusercontent.com/KanjiVG/KanjiVG/master/kanji/07cf8.svg`;
       imgElement.style.display = "block";
       placeholder.style.display = "none";
     }
   }
 
-  function resetQuiz() {
-    currentIdx = 0;
+  // 覚えた！ボタンの処理
+  function markAsLearned() {
+    if (activeIndices.length === 0) return;
+    
+    const originalIdx = activeIndices[currentActivePointer];
+    learnedSet.add(originalIdx);
+    
+    // リストを更新（現在のポインタ位置を維持したまま、覚えたものを除外）
+    rebuildActiveList(false);
+    
+    // 全て覚えた場合の処理
+    if (activeIndices.length === 0) {
+      document.getElementById('question').innerText = "ぜんぶクリア！";
+      document.getElementById('hints').innerHTML = "おめでとうございます！<br>すべての かんじ を おぼえました！";
+      clearCanvas();
+      return;
+    }
+    
+    // ポインタがはみ出ないように補正して次を表示
+    if (currentActivePointer >= activeIndices.length) {
+      currentActivePointer = 0; // 1巡の終わりに達していたら最初に戻る
+    }
     updateQuestion();
-  }
-
-  function updateQuestion() {
-    document.getElementById('question').innerText = "もんだい " + (currentIdx + 1);
-    document.getElementById('hints').innerHTML = quizData[currentIdx].q.join("<br>");
-    clearCanvas();
   }
 
   function nextQuestion() {
-    currentIdx = (currentIdx + 1) % quizData.length;
+    if (activeIndices.length === 0) return;
+    
+    currentActivePointer++;
+    // 1巡したら、まだ覚えていない漢字だけでループ（ポインタを頭に戻す）
+    if (currentActivePointer >= activeIndices.length) {
+      currentActivePointer = 0;
+    }
     updateQuestion();
   }
 
+  // 最初に戻る（覚えた記憶は保持）
+  function resetQuiz() {
+    rebuildActiveList(true);
+    if (activeIndices.length === 0) return;
+    updateQuestion();
+  }
+
+  // 覚えたことを忘れる（完全リセット）
+  function forgetAll() {
+    if (confirm("おぼえた かんじ の きろく を ぜんぶ けしますか？")) {
+      learnedSet.clear();
+      rebuildActiveList(true);
+      updateQuestion();
+    }
+  }
+
+  function updateQuestion() {
+    if (activeIndices.length === 0) {
+      rebuildActiveList(true);
+    }
+    
+    const originalIdx = activeIndices[currentActivePointer];
+    document.getElementById('question').innerText = "もんだい " + (originalIdx + 1);
+    document.getElementById('hints').innerHTML = quizData[originalIdx].q.join("<br>");
+    clearCanvas();
+  }
+
+  // アプリ起動時の初期化
+  rebuildActiveList(true);
   updateQuestion();
 </script>
 </body>
