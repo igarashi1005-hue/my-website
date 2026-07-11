@@ -7,13 +7,20 @@
 <style>
   body { font-family: sans-serif; text-align: center; padding: 10px; touch-action: none; background-color: #f9f9f9; margin: 0; }
   
+  /* 上部のコントロール・ファイル選択エリア */
+  .top-controls { margin-top: 10px; width: 100%; display: flex; justify-content: center; }
+  .load-btn { padding: 10px 20px; font-size: 16px; background: #9c27b0; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; }
+  #file-input { display: none; }
+
   /* 左上のコントロールエリア */
-  .control-container { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+  .control-container { position: absolute; top: 60px; left: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
   .reset-btn { padding: 4px 8px; font-size: 11px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; color: #666; }
   .forget-btn { padding: 4px 8px; font-size: 11px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 4px; cursor: pointer; color: #c62828; }
   
   /* 右上のステータスエリア */
-  .status-container { position: absolute; top: 10px; right: 10px; text-align: right; font-size: 12px; color: #666; font-weight: bold; line-height: 1.4; }
+  .status-container { position: absolute; top: 60px; right: 10px; text-align: right; font-size: 12px; color: #666; font-weight: bold; line-height: 1.4; }
+  #file-name-display { color: #9c27b0; margin-right: 8px; display: inline-block; }
+  #progress-display { display: inline-block; }
   .version { font-size: 10px; color: #999; font-weight: normal; }
   
   #main-layout { display: flex; flex-direction: column; align-items: center; max-width: 100%; padding: 0 10px; box-sizing: border-box; }
@@ -45,19 +52,27 @@
 <body>
 
 <div id="main-layout">
+  <div class="top-controls">
+    <button class="load-btn" onclick="triggerFileInput()">もんだいを切りかえる</button>
+    <input type="file" id="file-input" accept=".csv" onchange="loadCSV(event)">
+  </div>
+
   <div class="control-container">
     <button class="reset-btn" onclick="resetQuiz()">最初に戻る</button>
     <button class="forget-btn" onclick="forgetAll()">覚えたことを忘れる</button>
   </div>
   
   <div class="status-container">
-    <div id="progress-display">しんちょく: 0 / 81</div>
-    <div class="version">v1.1.2</div>
+    <div>
+      <span id="file-name-display">[ なし ]</span>
+      <span id="progress-display">しんちょく: 0 / 0</span>
+    </div>
+    <div class="version">v1.3.1</div>
   </div>
 
   <div id="question-box">
-    <div id="question">もんだい 1</div>
-    <div id="hints"></div>
+    <div id="question">もんだい を えらんでね</div>
+    <div id="hints">の上の「もんだいを切りかえる」ボタンから<br>CSVファイルをえらんでください。</div>
   </div>
 
   <canvas id="canvas" width="280" height="280"></canvas>
@@ -81,93 +96,11 @@
 </div>
 
 <script>
-  const quizData = [
-    { q: ["いえから[で]る", "じゅぎょうに[しゅっ]せきする", "[で]いりぐち", "ノートを[だ]す"], a: "出", code: "51fa" },
-    { q: ["[もじ]をかく", "さく[ぶん]のじゅぎょう", "がっきゅう[ぶん]こ", "つぼのうつくしい[もん]よう"], a: "文", code: "6587" },
-    { q: ["[しん]りんのくうきをすう", "[もり]をきりひらく", "[しん]げんなけいだいでいのる"], a: "森", code: "68ee" },
-    { q: ["じゆうの[め]がみ", "みれいちゃんはちょう[じょ]", "ろうにゃくなん[にょ]", "[おんな]のこ"], a: "女", code: "5973" },
-    { q: ["うつくしい[でん]えんふうけい", "[た]はたをたがやす", "[たん]ぼのあぜみち"], a: "田", code: "7530" },
-    { q: ["ちよがみであそぶ", "[せん]えん", "[せん]ばづるをおる"], a: "千", code: "5343" },
-    { q: ["ひとつ ひゃく[えん]", "[えん]をかく", "[まる]くなってすわる"], a: "円", code: "5186" },
-    { q: ["だんごを[やっ]つたべる", "[はち]がつようか", "ひとに[やつ]あたりする"], a: "八", code: "516b" },
-    { q: ["つよい[く]ちょうでせめる", "ひじょう[ぐち]へむかう", "かざんのか[こう]にけむりがたつ", "[くち]をあける"], a: "口", code: "53e3" },
-    { q: ["しんよう[じゅりん]", "[りん]どうにまよいこむ", "ビルが[りん]りつする", "[はやし]のなかをさんぽする"], a: "林", code: "6797" },
-    { q: ["まっ[さお]になる", "たいかくのよい[せい]ねん", "[あお]いそらがひろがる", "きが[あおあお]としげる"], a: "青", code: "9752" },
-    { q: ["ふじ[さん]は3776m", "と[ざん]する", "[やま]びこ", "[さん]さいをとる"], a: "山", code: "5c71" },
-    { q: ["おにに[かな]ぼう", "[かな]づちでたたく", "おう[ごん]のやまをみつける", "[こん]じき", "[きん]ようび"], a: "金", code: "91d1" },
-    { q: ["[なな]いろのにじ", "いちがつ[なの]か", "[しち]ふくじんのゆめをみる"], a: "七", code: "4e03" },
-    { q: ["かん[じ]とすう[じ]", "おおきく[じ]をかく"], a: "字", code: "5b57" },
-    { q: ["おかしが[ふた]つある", "[に]かいからめぐすり", "[ふた]りであそぶ"], a: "二", code: "4e8c" },
-    { q: ["[こ]どもがさわぐ", "クラスのだん[し]とじょ[し]", "おう[じ]さま"], a: "子", code: "5b50" },
-    { q: ["しょう[がつ]にもちをたべる", "こんやはまん[げつ]だ", "[げつ]めんにちゃくりくする", "[つき]がみえる"], a: "月", code: "6708" },
-    { q: ["さんすうの[てん]さい", "[あま]のがわがみえる", "[てん]をみあげる", "[てん]しにゆめであう"], a: "天", code: "5929" },
-    { q: ["[はや]いものがち", "かぜで[そう]たいする", "あし[ばや]にたちさる", "あさ[はや]くおきる"], a: "早", code: "65e9" },
-    { q: ["[ひと]どおりがはげしい", "おきにいりの[にん]ぎょう", "がいこく[じん]のおおいまち"], a: "人", code: "4eba" },
-    { q: ["かいていに[い]きるせいぶつ", "こけが[は]える", "やさいを[なま]でたべる", "こうまが[う]まれる", "いちねん[せい]"], a: "生", code: "751f" },
-    { q: ["[とお]までかぞえる", "[じっ]かいれんしゅうする", "こんやは[じゅう]ごやだ", "[じゅう]じろをさせつする"], a: "十", code: "5341" },
-    { q: ["つぎのしんごうを[う]せつする", "[う]おうさおうする", "[みぎ]てにペンをにぎる"], a: "右", code: "53f3" },
-    { q: ["[ねん]がじょう", "[とし]うえのあに", "[ねん]まつのおおうりだし", "いち[ねん]せい"], a: "年", code: "5e74" },
-    { q: ["[たび]をはく", "[あし]がでる", "[た]しざんをする", "やまへえん[そく]にいく", "さん[ぞく]のくつがならぶ"], a: "足", code: "8db3" },
-    { q: ["[もく]ひょうをさだめる", "ぼうしを[ま]ぶかにかぶる", "[め]かしらをおさえる", "[まじ]め"], a: "目", code: "76ee" },
-    { q: ["[にっ]きをつける", "[ひ]かげでやすむ", "[ひ]のまる", "みっ[か]ぼうずでしかられる"], a: "日", code: "65e5" },
-    { q: ["[ご]ご", "おひるの12時よりあと"], a: "午", code: "5348" },
-    { q: ["たまごが[むっ]つ", "ろくがつ[むい]か", "えんぴつ[ろっ]ぽん", "[ろく]じにおきる"], a: "六", code: "516d" },
-    { q: ["すいどうの[みず]をのむ", "[すい]ようび", "[すい]ちゅうをあるく", "あま[みず]がもる"], a: "水", code: "6c34" },
-    { q: ["ほたて[がい]の", "[かい]ばしら", "[かい]がらをあつめる"], a: "貝", code: "8c99" },
-    { q: ["[けん]えんのなか", "ばん[けん]がほえる", "こうえんでこ[いぬ]とあそぶ"], a: "犬", code: "72ac" },
-    { q: ["この[さき]はいきどまり", "つま[さき]でたつ", "[せん]とうをあるく", "たんにんの[せん]せい"], a: "先", code: "5148" },
-    { q: ["[あ]きかんをすてる", "[くう]きをいれかえる", "[から]ぶりでさんしんになる", "[そら]をとぶ"], a: "空", code: "7a7a" },
-    { q: ["こうじょうをけん[がく]する", "さんすうを[まな]ぶ", "しょう[がっ]こうにはいる", "てんもん[がく]のはかせ"], a: "学", code: "5b66" },
-    { q: ["かだんに[はな]がさく", "[はな]びがあがる", "[はな]びらがちる"], a: "花", code: "82b1" },
-    { q: ["きん[し]たまごをちらす", "かねに[いと]めをつけない", "かいけつの[いと]ぐち"], a: "糸", code: "07cf8" },
-    { q: ["[こう]ていであそぶ", "てん[こう]せいがくる", "[こう]もんのまえでてをふる"], a: "校", code: "6821" },
-    { q: ["ホールに[にゅう]じょうする", "きょうしつに[はい]る", "コップにみずを[い]れる"], a: "入", code: "5165" },
-    { q: ["か[しゅ]がうたう", "[しゅ]じゅつをする", "[て]づくりのおかし", "はく[しゅ]かっさい"], a: "手", code: "624b" },
-    { q: ["あたまを[さ]げる", "かわを[くだ]る", "まどの[した]をみおろす", "ひるすぎにげ[こう]する"], a: "下", code: "4e0b" },
-    { q: ["か[こう]のマグマ", "[か]じがおきる", "よわ[び]でにこむ", "[か]ようび"], a: "火", code: "706b" },
-    { q: ["[よ]じにまちあわせ", "りんごを[よっ]つかう", "[し]かく", "[よん]しょくのペン"], a: "四", code: "56db" },
-    { q: ["[こ]かげでやすむ", "たい[ぼく]をきりたおす", "[もく]ざいをあつめる", "[き]をうえる"], a: "木", code: "6728" },
-    { q: ["ちょうのよう[ちゅう]", "[むし]のいどころがわるい", "[むし]ばになる", "[むし]がいい"], a: "虫", code: "866b" },
-    { q: ["ひゃくじゅうの[おう]", "てらのに[おう]もん", "[おう]きゅうをけんがくする"], a: "王", code: "738b" },
-    { q: ["しょう[ちく]ばいのずがら", "[し]ないをふる", "[たけ]うまにのる", "[ちく]ばのとも", "[たけ]をわったようなせいかく"], a: "竹", code: "7af9" },
-    { q: ["いちごを[いつ]つたべる", "ごがつ[いつ]か"], a: "五", code: "4e94" },
-    { q: ["つ[ゆ]のきせつ", "[う]てんちゅうし", "[あま]やどりする", "[あめ]があがる"], a: "雨", code: "96e8" },
-    { q: ["このほんは[めい]さくだ", "[みょう]じとなまえ", "[な]ふだをつける", "おきゃくさんに[なの]る"], a: "名", code: "540d" },
-    { q: ["ぜんいんき[りつ]", "いけんがたい[りつ]する", "ろうそくを[た]てる", "おてらをこん[りゅう]する", "まっすぐ[た]つ"], a: "立", code: "7acb" },
-    { q: ["[ちょう]ないかいのおまつり", "ふるい[まち]なみがつづく", "かっきのあるみなと[まち]"], a: "町", code: "753a" },
-    { q: ["がっこうを[やす]む", "からだを[やす]める", "としょかんはきょう[きゅう]かんだ", "[きゅう]けいしよう"], a: "休", code: "4f11" },
-    { q: ["[かわ]らでいしをなげる", "か[せん]がぞうすいする", "[かわ]ぎしにふねがつく"], a: "川", code: "5ddd" },
-    { q: ["[み]かづきがでる", "[さん]びきのこぶた", "おかしを[みっ]つもらう"], a: "三", code: "4e09" },
-    { q: ["[しら]ががはえる", "[はく]じゅとは99さい", "[しら]たまだんご", "[はく]しのとうあん", "[しろ]いはをみせる"], a: "白", code: "767d" },
-    { q: ["[じ]びかへかよう", "[みみ]がいたい", "[みみ]をかたむける", "[みみ]をかす"], a: "耳", code: "8033" },
-    { q: ["[ちい]さいて", "えだに[こ]とりがとまる", "おがわに[こ]ざかながいる", "[しょう]がくせい"], a: "小", code: "5c0f" },
-    { q: ["ねん[ど]であそぶ", "[ど]そくげんきん", "ここの[とち]でとれたやさい", "[つち]からめがでる"], a: "土", code: "571f" },
-    { q: ["かんじのよみかたには[おん]よみとくんよみがある", "うつくしい[ね]いろ", "[おん]がくのじゅぎょう", "きょうかしょを[おん]どくする"], a: "音", code: "97f3" },
-    { q: ["おまつりのだ[し]", "ひのくる[ま]", "じてん[しゃ]の[しゃ]りん", "かざ[ぐるま]をまわす"], a: "車", code: "8eca" },
-    { q: ["か[りょく]をあげる", "じ[りき]でたちあがる", "[ちから]をこめてひっぱる"], a: "力", code: "529b" },
-    { q: ["[ゆう]がたにかえる", "[ゆう]はんのにおい", "[ゆう]だちにあう"], a: "夕", code: "5915" },
-    { q: ["[ひゃく]えん", "[ひゃく]てんをとる", "[ひゃく]にんいっしゅであそぶ", "[ひゃっ]ぱつ[ひゃく]ちゅう"], a: "百", code: "767e" },
-    { q: ["[いち]ばんになる", "[ひと]くちたべる", "にんじんを[いっ]ぽんかう"], a: "一", code: "4e00" },
-    { q: ["やまあいの[むら]", "のう[そん]でせいかつする", "[そん]ちょうにあいさつする", "[むら]やくばへいく"], a: "村", code: "6751" },
-    { q: ["ほう[せき]をみにつける", "じ[しゃく]にくぎがつく", "[いし]のうえにもさんねん", "[いし]あたま"], a: "石", code: "77f3" },
-    { q: ["かい[そう]をたべる", "[くさ]むしりをする", "やく[そう]をつぶす"], a: "草", code: "8349" },
-    { q: ["[けん]ぶつきゃくでにぎわう", "[み]よう[み]まね", "こうじょう[けん]がく"], a: "見", code: "898b" },
-    { q: ["くもの[うえ]", "てを[あ]げる", "[のぼ]りざか", "ビルのおく[じょう]"], a: "上", code: "4e0a" },
-    { q: ["[てん]きよほうをみる", "[き]がちる", "ゆ[げ]がたつ", "やさいがみず[け]をうしなう"], a: "気", code: "6c17" },
-    { q: ["ちょう[なん]とじ[なん]", "[だん]せいコーラス", "ろうにゃく[なん]にょ", "[おとこ]のこ"], a: "男", code: "7537" },
-    { q: ["[まっ]かになる", "[しゃく]どういろ", "せき[はん]をたく", "ほおを[あか]らめる"], a: "赤", code: "8d64" },
-    { q: ["[ぎょく]せきこんこう", "みず[たま]もようのスカート", "め[だま]やき"], a: "玉", code: "7389" },
-    { q: ["おかしが[ここの]つある", "ひとチーム[きゅう]にんだ", "[く]くをおぼえる", "いまは[く]じだ"], a: "九", code: "4e5d" },
-    { q: ["こう[だい]なそうげん", "たいふうでうみは[おお]あれだ", "[たい]きんをてにいれる"], a: "大", code: "5927" },
-    { q: ["きがね[もと]からおれる", "さん[ぼん]のペン", "[ほん]ものかしらべる", "[ほん]をよむ"], a: "本", code: "672c" },
-    { q: ["お[しょう]がつ", "まちがいを[ただ]す", "[せい]ぎのみかた", "[しょう]めんのいりぐち", "れいぎ[ただ]しいひと"], a: "正", code: "6b63" },
-    { q: ["ふくろの[なか]をのぞく", "[なか]にわであそぶ", "はなし[ちゅう]です", "せんせいを[ちゅう]しんとする"], a: "中", code: "4e2d" },
-    { q: ["ご[ぜん]", "おひるの12時[まえ]"], a: "前", code: "524d" }
-  ];
-  
+  let quizData = [];
   let learnedSet = new Set();
   let activeIndices = [];
   let currentActivePointer = 0;
+  let currentFileName = "";
 
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
@@ -210,6 +143,51 @@
     document.getElementById('stroke-order-placeholder').style.display = "block";
   }
 
+  function triggerFileInput() {
+    document.getElementById('file-input').click();
+  }
+
+  function loadCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 拡張子（.csv）を取り除いたファイル名を取得
+    currentFileName = file.name.replace(/\.[^/.]+$/, "");
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/);
+      const parsedData = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const columns = lines[i].split(',');
+        if (columns.length < 2) continue;
+
+        const hintsArray = columns[0].split('|');
+        const answer = columns[1].trim();
+        const code = columns[2] ? columns[2].trim() : "";
+
+        parsedData.push({ q: hintsArray, a: answer, code: code });
+      }
+
+      if (parsedData.length === 0) {
+        alert("CSVファイルを読み込めませんでした。");
+        return;
+      }
+
+      quizData = parsedData.slice(0, 50);
+      
+      learnedSet.clear();
+      rebuildActiveList(true);
+      updateQuestion();
+      
+      alert(`新しいもんだい「${currentFileName}」（${quizData.length}問）を読み込みました！`);
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
   function showAnswer() {
     if (activeIndices.length === 0) return;
     const currentData = quizData[activeIndices[currentActivePointer]];
@@ -236,6 +214,7 @@
   }
 
   function updateProgressDisplay() {
+    document.getElementById('file-name-display').innerText = currentFileName ? `[ ${currentFileName} ]` : "[ なし ]";
     document.getElementById('progress-display').innerText = `しんちょく: ${learnedSet.size} / ${quizData.length}`;
   }
 
@@ -260,11 +239,13 @@
   }
 
   function resetQuiz() {
+    if (activeIndices.length === 0) return;
     currentActivePointer = 0;
     updateQuestion();
   }
 
   function forgetAll() {
+    if (quizData.length === 0) return;
     if (confirm("きろくを すべて けしますか？")) {
       learnedSet.clear();
       rebuildActiveList(true);
@@ -273,6 +254,7 @@
   }
 
   function updateQuestion() {
+    if (quizData.length === 0) return;
     if (activeIndices.length === 0) rebuildActiveList(true);
     const originalIdx = activeIndices[currentActivePointer];
     document.getElementById('question').innerText = "もんだい " + (originalIdx + 1);
@@ -280,7 +262,7 @@
     clearCanvas();
   }
 
-  updateQuestion();
+  updateProgressDisplay();
 </script>
 </body>
 </html>
