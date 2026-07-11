@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>都道府県ドリル - パームリジェクション対応版</title>
+  <title>都道府県ドリル - ペン特化・細字版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
@@ -208,19 +208,18 @@
     const ctx = canvas.getContext("2d");
     let isDrawing = false;
 
-    ctx.lineWidth = 6;
+    // ★ 線の太さを 6 から 3 に変更しました
+    ctx.lineWidth = 3; 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "#1e293b"; 
 
     function getPointerPos(e) {
       const rect = canvas.getBoundingClientRect();
-      // PointerEventの座標取得に統一
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
     function startDrawing(e) {
-      // ペン以外（指、手のひら、マウス等）の入力を弾く
       if (e.pointerType !== 'pen') return;
       
       e.preventDefault();
@@ -231,7 +230,6 @@
     }
 
     function draw(e) {
-      // ペン以外（指、手のひら、マウス等）の入力を弾く
       if (e.pointerType !== 'pen') return;
 
       e.preventDefault();
@@ -242,14 +240,12 @@
     }
 
     function stopDrawing(e) {
-      // ペン以外（指、手のひら、マウス等）の入力を弾く
       if (e.pointerType !== 'pen') return;
 
       e.preventDefault();
       isDrawing = false;
     }
 
-    // PointerEventのみを監視
     canvas.addEventListener("pointerdown", startDrawing);
     canvas.addEventListener("pointermove", draw);
     canvas.addEventListener("pointerup", stopDrawing);

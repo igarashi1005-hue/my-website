@@ -52,7 +52,7 @@
   
   <div class="status-container">
     <div id="progress-display">しんちょく: 0 / 81</div>
-    <div class="version">v1.1.0</div>
+    <div class="version">v1.1.2</div>
   </div>
 
   <div id="question-box">
@@ -81,7 +81,6 @@
 </div>
 
 <script>
-  // 全81問の問題データ
   const quizData = [
     { q: ["いえから[で]る", "じゅぎょうに[しゅっ]せきする", "[で]いりぐち", "ノートを[だ]す"], a: "出", code: "51fa" },
     { q: ["[もじ]をかく", "さく[ぶん]のじゅぎょう", "がっきゅう[ぶん]こ", "つぼのうつくしい[もん]よう"], a: "文", code: "6587" },
@@ -136,7 +135,7 @@
     { q: ["このほんは[めい]さくだ", "[みょう]じとなまえ", "[な]ふだをつける", "おきゃくさんに[なの]る"], a: "名", code: "540d" },
     { q: ["ぜんいんき[りつ]", "いけんがたい[りつ]する", "ろうそくを[た]てる", "おてらをこん[りゅう]する", "まっすぐ[た]つ"], a: "立", code: "7acb" },
     { q: ["[ちょう]ないかいのおまつり", "ふるい[まち]なみがつづく", "かっきのあるみなと[まち]"], a: "町", code: "753a" },
-    { q: ["Keep learning in school", "rest your body", "the library is closed today", "let's take a break"], a: "休", code: "4f11" },
+    { q: ["がっこうを[やす]む", "からだを[やす]める", "としょかんはきょう[きゅう]かんだ", "[きゅう]けいしよう"], a: "休", code: "4f11" },
     { q: ["[かわ]らでいしをなげる", "か[せん]がぞうすいする", "[かわ]ぎしにふねがつく"], a: "川", code: "5ddd" },
     { q: ["[み]かづきがでる", "[さん]びきのこぶた", "おかしを[みっ]つもらう"], a: "三", code: "4e09" },
     { q: ["[しら]ががはえる", "[はく]じゅとは99さい", "[しら]たまだんご", "[はく]しのとうあん", "[しろ]いはをみせる"], a: "白", code: "767d" },
@@ -163,25 +162,22 @@
     { q: ["きがね[もと]からおれる", "さん[ぼん]のペン", "[ほん]ものかしらべる", "[ほん]をよむ"], a: "本", code: "672c" },
     { q: ["お[しょう]がつ", "まちがいを[ただ]す", "[せい]ぎのみかた", "[しょう]めんのいりぐち", "れいぎ[ただ]しいひと"], a: "正", code: "6b63" },
     { q: ["ふくろの[なか]をのぞく", "[なか]にわであそぶ", "はなし[ちゅう]です", "せんせいを[ちゅう]しんとする"], a: "中", code: "4e2d" },
-    { q: ["[ご]ぜん", "おひるの12時[まえ]"], a: "前", code: "524d" }
+    { q: ["ご[ぜん]", "おひるの12時[まえ]"], a: "前", code: "524d" }
   ];
   
-  // 「覚えた（習得済み）」状態を追跡する配列（インデックスで管理）
   let learnedSet = new Set();
-  // 現在出題可能な（まだ覚えていない）問題のインデックスリスト
   let activeIndices = [];
-  let currentActivePointer = 0; // activeIndices内のどこを指しているか
+  let currentActivePointer = 0;
 
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   let painting = false;
 
   ctx.strokeStyle = "black";
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 5;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // 手書き処理（ペン機能の追跡）
   canvas.addEventListener('pointerdown', (e) => { 
     if (e.pointerType !== 'pen') return;
     painting = true; 
@@ -214,29 +210,9 @@
     document.getElementById('stroke-order-placeholder').style.display = "block";
   }
 
-  // 出題リスト（未習得リスト）の再構築
-  function rebuildActiveList(goToFirst) {
-    activeIndices = [];
-    for (let i = 0; i < quizData.length; i++) {
-      if (!learnedSet.has(i)) {
-        activeIndices.push(i);
-      }
-    }
-    if (goToFirst) {
-      currentActivePointer = 0;
-    }
-    updateProgressDisplay();
-  }
-
-  function updateProgressDisplay() {
-    document.getElementById('progress-display').innerText = `しんちょく: ${learnedSet.size} / ${quizData.length}`;
-  }
-
   function showAnswer() {
     if (activeIndices.length === 0) return;
-    const originalIdx = activeIndices[currentActivePointer];
-    const currentData = quizData[originalIdx];
-    
+    const currentData = quizData[activeIndices[currentActivePointer]];
     document.getElementById('answer-display').innerText = currentData.a;
     
     const imgElement = document.getElementById('stroke-order-img');
@@ -250,52 +226,46 @@
     }
   }
 
-  // 覚えた！ボタンの処理
+  function rebuildActiveList(goToFirst) {
+    activeIndices = [];
+    for (let i = 0; i < quizData.length; i++) {
+      if (!learnedSet.has(i)) activeIndices.push(i);
+    }
+    if (goToFirst) currentActivePointer = 0;
+    updateProgressDisplay();
+  }
+
+  function updateProgressDisplay() {
+    document.getElementById('progress-display').innerText = `しんちょく: ${learnedSet.size} / ${quizData.length}`;
+  }
+
   function markAsLearned() {
     if (activeIndices.length === 0) return;
-    
-    const originalIdx = activeIndices[currentActivePointer];
-    learnedSet.add(originalIdx);
-    
-    // リストを更新（現在のポインタ位置を維持したまま、覚えたものを除外）
+    learnedSet.add(activeIndices[currentActivePointer]);
     rebuildActiveList(false);
-    
-    // 全て覚えた場合の処理
     if (activeIndices.length === 0) {
       document.getElementById('question').innerText = "ぜんぶクリア！";
-      document.getElementById('hints').innerHTML = "おめでとうございます！<br>すべての かんじ を おぼえました！";
+      document.getElementById('hints').innerHTML = "おめでとう！";
       clearCanvas();
-      return;
+    } else {
+      if (currentActivePointer >= activeIndices.length) currentActivePointer = 0;
+      updateQuestion();
     }
-    
-    // ポインタがはみ出ないように補正して次を表示
-    if (currentActivePointer >= activeIndices.length) {
-      currentActivePointer = 0; // 1巡の終わりに達していたら最初に戻る
-    }
-    updateQuestion();
   }
 
   function nextQuestion() {
     if (activeIndices.length === 0) return;
-    
-    currentActivePointer++;
-    // 1巡したら、まだ覚えていない漢字だけでループ（ポインタを頭に戻す）
-    if (currentActivePointer >= activeIndices.length) {
-      currentActivePointer = 0;
-    }
+    currentActivePointer = (currentActivePointer + 1) % activeIndices.length;
     updateQuestion();
   }
 
-  // 最初に戻る（覚えた記憶は保持）
   function resetQuiz() {
-    rebuildActiveList(true);
-    if (activeIndices.length === 0) return;
+    currentActivePointer = 0;
     updateQuestion();
   }
 
-  // 覚えたことを忘れる（完全リセット）
   function forgetAll() {
-    if (confirm("おぼえた かんじ の きろく を ぜんぶ けしますか？")) {
+    if (confirm("きろくを すべて けしますか？")) {
       learnedSet.clear();
       rebuildActiveList(true);
       updateQuestion();
@@ -303,18 +273,13 @@
   }
 
   function updateQuestion() {
-    if (activeIndices.length === 0) {
-      rebuildActiveList(true);
-    }
-    
+    if (activeIndices.length === 0) rebuildActiveList(true);
     const originalIdx = activeIndices[currentActivePointer];
     document.getElementById('question').innerText = "もんだい " + (originalIdx + 1);
     document.getElementById('hints').innerHTML = quizData[originalIdx].q.join("<br>");
     clearCanvas();
   }
 
-  // アプリ起動時の初期化
-  rebuildActiveList(true);
   updateQuestion();
 </script>
 </body>
