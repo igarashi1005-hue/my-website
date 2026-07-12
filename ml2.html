@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>「水」かさのへんかんクイズ</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+            background-color: #fdf2f8;
+            color: #333;
+            text-align: center;
+            padding: 15px;
+            margin: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #db2777;
+            font-size: 22px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .quiz-box {
+            background-color: #fdf2f8;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border: 2px solid #fbcfe8;
+        }
+        .visual-container {
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
+        }
+        .visual-section {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            min-height: 110px;
+            align-items: flex-end;
+            padding: 10px 0;
+        }
+        .section-line {
+            border-top: 2px dashed #cbd5e1;
+            margin: 5px 0;
+        }
+        .item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+        .sub-text {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: normal;
+            margin-top: 2px;
+        }
+        .bottle {
+            width: 55px;
+            border-radius: 5px 5px 10px 10px;
+            border: 3px solid #333;
+            position: relative;
+            background: #e2e8f0;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        .water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #38bdf8;
+            height: 100%;
+        }
+        .L-size { height: 85px; width: 55px; }
+        .dL-size { height: 55px; width: 38px; }
+        .mL-box-size { height: 75px; width: 50px; border-radius: 4px; background: #cbd5e1; }
+        .mL-box-size .water { background-color: #0ea5e9; }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 12px;
+        }
+        .unit-label {
+            font-size: 32px;
+            font-weight: bold;
+            margin-left: 15px;
+            color: #0f172a;
+        }
+        .counter-btn {
+            width: 65px;
+            height: 65px;
+            font-size: 32px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            transition: transform 0.05s;
+            touch-action: none; 
+        }
+        .counter-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        .btn-minus { background-color: #ef4444; }
+        .btn-plus { background-color: #3b82f6; }
+        
+        .input-row input {
+            width: 140px;
+            height: 60px;
+            font-size: 36px;
+            font-weight: bold;
+            text-align: center;
+            margin: 0 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: white;
+            color: black;
+            -moz-appearance: textfield;
+        }
+
+        .action-area {
+            margin-top: 25px;
+        }
+        .btn-action {
+            background-color: #22c55e;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #16a34a;
+            touch-action: none;
+        }
+        .btn-action:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+        
+        #result {
+            margin-top: 20px;
+            font-size: 32px;
+            font-weight: bold;
+            min-height: 45px;
+        }
+        .correct { color: #ef4444; }
+        .incorrect { color: #3b82f6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>「水」かさのへんかんクイズ</h1>
+    
+    <div class="quiz-box">
+        <span id="question-text">----</span> は なに <span id="target-unit-text">?</span> ？
+    </div>
+
+    <div class="visual-container">
+        <div class="visual-section" id="visual-top"></div>
+        <div class="section-line"></div>
+        <div class="visual-section" id="visual-bottom"></div>
+    </div>
+
+    <div class="input-row">
+        <button class="counter-btn btn-minus" id="btn-minus-action">-</button>
+        <input type="number" id="user-answer" value="0" readonly>
+        <button class="counter-btn btn-plus" id="btn-plus-action">+</button>
+        <div class="unit-label" id="answer-unit-label">?</div>
+    </div>
+
+    <div class="action-area">
+        <button class="btn-action" onclick="checkAnswer()">こたえあわせ</button>
+        <button class="btn-action" onclick="nextQuestion()" style="background-color: #ba68c8; box-shadow: 0 5px 0 #9c27b0; margin-left: 10px;">つぎへ</button>
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<script>
+    var UNITS = ['L', 'dL', 'mL'];
+    var fromUnit = '';
+    var toUnit = '';
+    var questionValue = 0;
+    var correctValue = 0;
+    var audioCtx = null;
+    var currentStep = 1;
+
+    function changeVal(amount) {
+        initAudio();
+        var input = document.getElementById('user-answer');
+        if (!input) return;
+        var val = parseInt(input.value) || 0;
+        val += amount;
+        if (val < 0) val = 0;
+        input.value = val;
+    }
+
+    function initAudio() {
+        if (!audioCtx) {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        initAudio();
+        if (!audioCtx) return;
+
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        var now = audioCtx.currentTime;
+
+        if (type === 'correct') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(783.99, now); 
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+            osc.frequency.setValueAtTime(659.25, now + 0.25); 
+            gain.gain.setValueAtTime(0.2, now + 0.25);
+            gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.8);
+            osc.start(now);
+            osc.stop(now + 0.8);
+        } else if (type === 'incorrect') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(140, now);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.setValueAtTime(0, now + 0.15);
+            osc.frequency.setValueAtTime(140, now + 0.2);
+            gain.gain.setValueAtTime(0.15, now + 0.2);
+            gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.45);
+            osc.start(now);
+            osc.stop(now + 0.45);
+        }
+    }
+
+    function nextQuestion() {
+        initAudio();
+        
+        var resultDiv = document.getElementById('result');
+        var userAnsInput = document.getElementById('user-answer');
+        if (resultDiv) resultDiv.innerHTML = "";
+        if (userAnsInput) userAnsInput.value = "0";
+
+        fromUnit = UNITS[Math.floor(Math.random() * UNITS.length)];
+        do {
+            toUnit = UNITS[Math.floor(Math.random() * UNITS.length)];
+        } while (fromUnit === toUnit);
+
+        var ML_MAP = { 'L': 1000, 'dL': 100, 'mL': 1 };
+        var isValid = false;
+        var loopCount = 0;
+
+        while (!isValid && loopCount < 100) {
+            loopCount++;
+            var baseMl = 0;
+            var rand = Math.floor(Math.random() * 3) + 1; 
+            
+            if (fromUnit === 'L' || toUnit === 'L') {
+                baseMl = rand * 1000; 
+            } else {
+                baseMl = (Math.floor(Math.random() * 8) + 1) * 100; 
+            }
+
+            questionValue = baseMl / ML_MAP[fromUnit];
+            correctValue = baseMl / ML_MAP[toUnit];
+
+            if (Number.isInteger(questionValue) && Number.isInteger(correctValue) && questionValue > 0 && correctValue > 0) {
+                isValid = true;
+            }
+        }
+
+        document.getElementById('question-text').innerText = questionValue + " " + fromUnit;
+        document.getElementById('target-unit-text').innerText = toUnit;
+        document.getElementById('answer-unit-label').innerText = toUnit;
+
+        currentStep = (toUnit === 'mL') ? 100 : 1;
+
+        generateGraphics();
+    }
+
+    // ★重要：1Lと1dLの下にそれぞれ指定の補助表記を表示するロジック
+    function drawSectionGraphics(unit, val) {
+        var html = "";
+        
+        if (unit === 'L') {
+            for (var i = 0; i < val; i++) {
+                html += '<div class="item"><div class="bottle L-size"><div class="water"></div></div>1L<div class="sub-text">(1000mL)</div></div>';
+            }
+        } else if (unit === 'dL') {
+            for (var j = 0; j < val; j++) {
+                html += '<div class="item"><div class="bottle dL-size"><div class="water"></div></div>1dL<div class="sub-text">(100mL)</div></div>';
+            }
+        } else if (unit === 'mL') {
+            if (val >= 1000) {
+                var boxCount1000 = val / 1000;
+                for (var k = 0; k < boxCount1000; k++) {
+                    html += '<div class="item"><div class="bottle mL-box-size"><div class="water"></div></div>1000mL</div>';
+                }
+            } else {
+                var boxCount100 = val / 100;
+                for (var m = 0; m < boxCount100; m++) {
+                    html += '<div class="item"><div class="bottle mL-box-size"><div class="water"></div></div>100mL</div>';
+                }
+            }
+        }
+        return html;
+    }
+
+    function generateGraphics() {
+        var topArea = document.getElementById('visual-top');
+        var bottomArea = document.getElementById('visual-bottom');
+        if (!topArea || !bottomArea) return;
+        
+        topArea.innerHTML = drawSectionGraphics(fromUnit, questionValue);
+        bottomArea.innerHTML = drawSectionGraphics(toUnit, correctValue);
+    }
+
+    function checkAnswer() {
+        var userAns = parseInt(document.getElementById('user-answer').value) || 0;
+        var resultDiv = document.getElementById('result');
+        if (!resultDiv) return;
+
+        if (userAns === correctValue) {
+            resultDiv.innerHTML = "<span class='correct'>🔴 せいかい！ すごい！</span>";
+            playSound('correct');
+        } else {
+            resultDiv.innerHTML = "<span class='incorrect'>❌ ざんねん！ もういちど！</span>";
+            playSound('incorrect');
+        }
+    }
+
+    window.onload = function() {
+        document.getElementById('btn-minus-action').onclick = function() { changeVal(-currentStep); };
+        document.getElementById('btn-plus-action').onclick = function() { changeVal(currentStep); };
+        nextQuestion();
+    };
+</script>
+
+</body>
+</html>
