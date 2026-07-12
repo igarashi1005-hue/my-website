@@ -39,12 +39,23 @@
             margin-bottom: 20px;
             border: 2px solid #fbcfe8;
         }
+        
+        /* ヒントエリア全体の枠 */
         .visual-container {
             background-color: #f8fafc;
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 25px;
             border: 1px solid #e2e8f0;
+            position: relative;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        /* 図を表示するエリア（最初は隠す） */
+        .visual-content {
+            display: none; 
         }
         .visual-section {
             display: flex;
@@ -59,6 +70,28 @@
             border-top: 2px dashed #cbd5e1;
             margin: 5px 0;
         }
+        
+        /* 大きなヒントボタン */
+        .btn-hint {
+            background-color: #f59e0b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #d97706;
+            margin: 10px auto;
+            display: block;
+            width: 60%;
+            touch-action: none;
+        }
+        .btn-hint:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
         .item {
             display: flex;
             flex-direction: column;
@@ -184,9 +217,13 @@
     </div>
 
     <div class="visual-container">
-        <div class="visual-section" id="visual-top"></div>
-        <div class="section-line"></div>
-        <div class="visual-section" id="visual-bottom"></div>
+        <button class="btn-hint" id="hint-button" onclick="showHint()">💡 ヒントをみる</button>
+        
+        <div class="visual-content" id="hint-content">
+            <div class="visual-section" id="visual-top"></div>
+            <div class="section-line"></div>
+            <div class="visual-section" id="visual-bottom"></div>
+        </div>
     </div>
 
     <div class="input-row">
@@ -233,6 +270,13 @@
         }
     }
 
+    // ★ヒントボタンを押したときに図を表示する関数
+    function showHint() {
+        initAudio();
+        document.getElementById('hint-button').style.display = 'none'; // ヒントボタンを消す
+        document.getElementById('hint-content').style.display = 'block'; // 図を表示する
+    }
+
     function playSound(type) {
         initAudio();
         if (!audioCtx) return;
@@ -274,6 +318,10 @@
         if (resultDiv) resultDiv.innerHTML = "";
         if (userAnsInput) userAnsInput.value = "0";
 
+        // ★次の問題にいくときは、ヒントボタンを復活させて図を隠す
+        document.getElementById('hint-button').style.display = 'block';
+        document.getElementById('hint-content').style.display = 'none';
+
         fromUnit = UNITS[Math.floor(Math.random() * UNITS.length)];
         do {
             toUnit = UNITS[Math.floor(Math.random() * UNITS.length)];
@@ -311,7 +359,6 @@
         generateGraphics();
     }
 
-    // ★重要：1Lと1dLの下にそれぞれ指定の補助表記を表示するロジック
     function drawSectionGraphics(unit, val) {
         var html = "";
         
