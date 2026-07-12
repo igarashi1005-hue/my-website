@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>都道府県ドリル - v1.2</title>
+  <title>都道府県ドリル - v1.3</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
@@ -50,7 +50,7 @@
       </span>
     </div>
 
-    <span class="absolute top-1 right-2 text-[10px] text-blue-200">v1.2</span>
+    <span class="absolute top-1 right-2 text-[10px] text-blue-200">v1.3</span>
 
   </header>
 
@@ -62,12 +62,7 @@
     </div>
   </div>
 
-  <div class="bg-white py-2 px-6 text-center shadow-sm z-10">
-    <p class="text-gray-500 text-xs font-bold">💡 ヒント</p>
-    <h2 id="hint-text" class="text-2xl font-bold text-gray-800">...</h2>
-  </div>
-
-  <div class="bg-gray-50 py-4 px-4 flex flex-col items-center justify-start flex-none h-[400px]">
+  <div class="bg-gray-50 py-6 px-4 flex flex-col items-center justify-start flex-none h-[400px]">
     
     <div id="quiz-play-area" class="flex w-full max-w-5xl justify-center gap-10 items-start">
       
@@ -110,59 +105,22 @@
   </div>
 
   <script>
-    // --- コンテキストメニュー（長押しメニュー）のブロック ---
     document.addEventListener('contextmenu', function(e) {
       e.preventDefault();
     }, { passive: false });
 
+    // 都道府県データ（配列構造は維持）
     const prefecturesData = [
-      { name: "北海道", hint: "じゃがいも、カニ、雪まつり" },
-      { name: "青森県", hint: "りんご、ねぶた祭り" },
-      { name: "岩手県", hint: "わんこそば、南部鉄器" },
-      { name: "宮城県", hint: "牛タン、笹かまぼこ" },
-      { name: "秋田県", hint: "きりたんぽ、なまはげ" },
-      { name: "山形県", hint: "さくらんぼ、将棋の駒" },
-      { name: "福島県", hint: "桃、赤べこ、喜多方ラーメン" },
-      { name: "茨城県", hint: "納豆、ほしいも、メロン" },
-      { name: "栃木県", hint: "いちご、宇都宮ギョーザ" },
-      { name: "群馬県", hint: "キャベツ、草津温泉、焼きまんじゅう" },
-      { name: "埼玉県", hint: "深谷ねぎ、草加せんべい" },
-      { name: "千葉県", hint: "落花生（ピーナッツ）、びわ、成田国際空港" },
-      { name: "東京都", hint: "東京タワー、スカイツリー、もんじゃ焼き" },
-      { name: "神奈川県", hint: "しゅうまい、横浜中華街、箱根温泉" },
-      { name: "新潟県", hint: "お米（コシヒカリ）、笹だんご、日本酒" },
-      { name: "富山県", hint: "ホタルイカ、白エビ、富山の薬売り" },
-      { name: "石川県", hint: "金箔、輪島塗、兼六園" },
-      { name: "福井県", hint: "越前ガニ、恐竜の化石、お箸" },
-      { name: "山梨県", hint: "ぶどう、桃、ほうとう、富士山（北側）" },
-      { name: "長野県", hint: "信州そば、りんご、レタス" },
-      { name: "岐阜県", hint: "さるぼぼ、鵜飼い、白川郷の合掌造り" },
-      { name: "静岡県", hint: "お茶、みかん、うなぎ、富士山（南側）" },
-      { name: "愛知県", hint: "自動車づくり、手羽先、金のしゃちほこ" },
-      { name: "三重県", hint: "松阪牛、伊勢エビ、伊勢神宮" },
-      { name: "滋賀県", hint: "近江牛、琵琶湖、信楽焼" },
-      { name: "京都府", hint: "金閣寺、舞妓さん、宇治茶、八ツ橋" },
-      { name: "大阪府", hint: "たこ焼き、お好み焼き、通天閣" },
-      { name: "兵庫県", hint: "神戸牛、姫路城、明石焼き" },
-      { name: "奈良県", hint: "東大寺の大仏、鹿、柿の葉寿司" },
-      { name: "和歌山県", hint: "みかん、梅干し、高野山" },
-      { name: "鳥取県", hint: "鳥取砂丘、二十世紀梨、らっきょう" },
-      { name: "島根県", hint: "出雲大社、しじみ、石見銀山" },
-      { name: "岡山県", hint: "桃太郎（きびだんご）、マスカット、ジーンズ" },
-      { name: "広島県", hint: "お好み焼き、もみじ饅頭、厳島神社" },
-      { name: "山口県", hint: "ふぐ、秋吉台（カルスト地形）、錦帯橋" },
-      { name: "徳島県", hint: "阿波踊り、すだち、鳴門の渦潮" },
-      { name: "香川県", hint: "讃岐うどん、オリーブ、金刀比羅宮" },
-      { name: "愛媛県", hint: "みかん、道後温泉、今治タオル" },
-      { name: "高知県", hint: "カツオのたたき、よさこい祭り、坂本龍馬" },
-      { name: "福岡県", hint: "辛子明太子、とんこつラーメン、あまおう（いちご）" },
-      { name: "佐賀県", hint: "有田焼・伊万里焼、佐賀牛、佐賀の海苔" },
-      { name: "長崎県", hint: "カステラ、ちゃんぽん、ハウステンボス" },
-      { name: "熊本県", hint: "スイカ、辛子レンコン、熊本城" },
-      { name: "大分県", hint: "温泉（別府・由布院）、かぼす、とり天" },
-      { name: "宮崎県", hint: "マンゴー、チキン南蛮、日向夏" },
-      { name: "鹿児島県", hint: "黒豚、さつまいも、桜島" },
-      { name: "沖縄県", hint: "ゴーヤ、シーサー、ちんすこう、サーターアンダギー" }
+      { name: "北海道" }, { name: "青森県" }, { name: "岩手県" }, { name: "宮城県" }, { name: "秋田県" },
+      { name: "山形県" }, { name: "福島県" }, { name: "茨城県" }, { name: "栃木県" }, { name: "群馬県" },
+      { name: "埼玉県" }, { name: "千葉県" }, { name: "東京都" }, { name: "神奈川県" }, { name: "新潟県" },
+      { name: "富山県" }, { name: "石川県" }, { name: "福井県" }, { name: "山梨県" }, { name: "長野県" },
+      { name: "岐阜県" }, { name: "静岡県" }, { name: "愛知県" }, { name: "三重県" }, { name: "滋賀県" },
+      { name: "京都府" }, { name: "大阪府" }, { name: "兵庫県" }, { name: "奈良県" }, { name: "和歌山県" },
+      { name: "鳥取県" }, { name: "島根県" }, { name: "岡山県" }, { name: "広島県" }, { name: "山口県" },
+      { name: "徳島県" }, { name: "香川県" }, { name: "愛媛県" }, { name: "高知県" }, { name: "福岡県" },
+      { name: "佐賀県" }, { name: "長崎県" }, { name: "熊本県" }, { name: "大分県" }, { name: "宮崎県" },
+      { name: "鹿児島県" }, { name: "沖縄県" }
     ];
 
     let currentIndex = 0;
@@ -223,41 +181,51 @@
       loadQuestion();
     });
 
-    // --- キャンバス処理 ---
+    // --- 超低遅延・高速追従キャンバス処理 ---
     const canvas = document.getElementById("drawing-pad");
     const ctx = canvas.getContext("2d", { desynchronized: true });
     let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
 
     ctx.lineWidth = 3; 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "#1e293b"; 
 
-    function getPointerPos(e) {
+    function getCanvasPos(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
     function startDrawing(e) {
       if (e.pointerType !== 'pen') return;
       e.preventDefault();
       isDrawing = true;
-      const pos = getPointerPos(e);
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
+      const pos = getCanvasPos(e.clientX, e.clientY);
+      lastX = pos.x;
+      lastY = pos.y;
     }
 
     function draw(e) {
       if (e.pointerType !== 'pen') return;
-      e.preventDefault(); // ここでもブラウザの標準ジェスチャーをブロック
+      e.preventDefault();
       if (!isDrawing) return;
       
-      const pos = getPointerPos(e);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
-
+      // 高速描画の肝：間引かれた隠れたイベント（点データ）をすべて回収する
+      const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
+      
       ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
+      ctx.moveTo(lastX, lastY);
+      
+      for (let ev of events) {
+        const pos = getCanvasPos(ev.clientX, ev.clientY);
+        ctx.lineTo(pos.x, pos.y);
+        lastX = pos.x;
+        lastY = pos.y;
+      }
+      
+      ctx.stroke();
     }
 
     function stopDrawing(e) {
@@ -271,8 +239,6 @@
     canvas.addEventListener("pointerup", stopDrawing);
     canvas.addEventListener("pointerout", stopDrawing);
 
-    // ★追加：タッチジェスチャー（スクロールやスワイプ）の完全無効化
-    // passive: false を指定することで、確実に e.preventDefault() が効くようにします
     canvas.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
     canvas.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
     canvas.addEventListener('touchend', function(e) { e.preventDefault(); }, { passive: false });
@@ -284,7 +250,6 @@
     function loadQuestion() {
       const currentPref = prefecturesData[currentIndex];
       
-      document.getElementById("hint-text").innerText = currentPref.hint;
       document.getElementById("question-counter").innerText = `第${currentIndex + 1}問`;
       updateProgressUI();
       clearCanvas();
