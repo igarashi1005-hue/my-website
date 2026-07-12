@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>かさ（水のリットル）クイズ！</title>
     <style>
         body {
@@ -12,9 +12,9 @@
             text-align: center;
             padding: 15px;
             margin: 0;
-            /* タブレットでの誤操作（文字選択）を防ぐ */
             user-select: none;
             -webkit-user-select: none;
+            touch-action: manipulation;
         }
         .container {
             max-width: 650px;
@@ -86,7 +86,7 @@
         .dL-size { height: 60px; width: 40px; }
         .mL-size { height: 35px; width: 28px; }
 
-        /* タブレット用：大きな入力コントロール */
+        /* 大きな入力コントロール */
         .input-row {
             display: flex;
             align-items: center;
@@ -114,6 +114,7 @@
             color: white;
             box-shadow: 0 4px 0 rgba(0,0,0,0.2);
             transition: transform 0.05s;
+            touch-action: none; 
         }
         .counter-btn:active {
             transform: translateY(4px);
@@ -131,7 +132,6 @@
             margin: 0 10px;
             border: 2px solid #cbd5e1;
             border-radius: 8px;
-            /* 標準の上下矢印を非表示にする */
             -moz-appearance: textfield;
         }
         .input-row input::-webkit-outer-spin-button,
@@ -154,6 +154,7 @@
             border-radius: 50px;
             cursor: pointer;
             box-shadow: 0 5px 0 #16a34a;
+            touch-action: none;
         }
         .btn-action:active {
             transform: translateY(5px);
@@ -215,44 +216,83 @@
     let currentDl = 0;
     let currentMl = 0;
     let totalMl = 0;
+    
+    // iPad対策：グローバルでオーディオコンテキストを1つだけ用意（最初は空っぽ）
+    let audioCtx = null;
 
-    // ボタンで数値を増減させる関数（タブレット用）
+    // ボタンで数値を増減させる関数
     function changeVal(id, amount) {
+        initAudio(); // タップの瞬間にiPad用の音源を解放
         const input = document.getElementById(id);
         let val = parseInt(input.value) || 0;
         val += amount;
-        if (val < 0) val = 0; // 0未満にはならない
+        if (val < 0) val = 0;
         input.value = val;
     }
 
+    // ★iPadの消音モード制限を突破するための初期化関数
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                audioCtx = new AudioContext();
+            }
+        }
+        // 中断されていた場合は再開させる（iOSの強力な保護対策）
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    // 効果音を鳴らすメイン処理
     function playSound(type) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        initAudio();
+        if (!audioCtx) return;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
 
         if (type === 'correct') {
+            // ★ピンポーン音（ソ→ミ の2段階で伸びる綺麗な音）
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(659.25, ctx.currentTime); 
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.1);
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3);
-            osc.stop(ctx.currentTime + 0.3);
+            
+            // 「ピン」
+            osc.frequency.setValueAtTime(783.99, now); // 高いソ
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.05); // やわらかく立ち上げる
+            
+            // 「ポーン」
+            osc.frequency.setValueAtTime(659.25, now + 0.25); // ミの音に下がる
+            gain.gain.setValueAtTime(0.2, now + 0.25);
+            gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.8); // 余韻を残して消える
+            
+            osc.start(now);
+            osc.stop(now + 0.8);
         } else if (type === 'incorrect') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, ctx.currentTime);
-            gain.gain.setValueAtTime(0.15, ctx.currentTime);
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4);
-            osc.stop(ctx.currentTime + 0.4);
+            // ★ブッブー音（濁った低い音が2回短く鳴る）
+            osc.type = 'sawtooth'; // 濁った波形
+            
+            // 1回目の「ブッ」
+            osc.frequency.setValueAtTime(140, now);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.setValueAtTime(0, now + 0.15);
+            
+            // 2回目の「ブッ」
+            osc.frequency.setValueAtTime(140, now + 0.2);
+            gain.gain.setValueAtTime(0.15, now + 0.2);
+            gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.45);
+            
+            osc.start(now);
+            osc.stop(now + 0.45);
         }
     }
 
     function nextQuestion() {
+        initAudio(); // 次へボタンのタップでも音源準備
         document.getElementById('result').innerHTML = "";
         document.getElementById('ans-l').value = "0";
         document.getElementById('ans-dl').value = "0";
@@ -277,11 +317,9 @@
         const area = document.getElementById('visual-area');
         area.innerHTML = "";
 
-        // Lのバケツ
         for(let i=0; i<currentL; i++) {
             area.innerHTML += `<div class="item"><div class="bottle L-size"><div class="water"></div></div>1L</div>`;
         }
-        // dLのコップ（下に (100mL) の補助表記を追加）
         for(let i=0; i<currentDl; i++) {
             area.innerHTML += `
                 <div class="item">
@@ -290,7 +328,6 @@
                     <div class="sub-text">(100mL)</div>
                 </div>`;
         }
-        // mLのスプーン
         if (currentMl > 0) {
             area.innerHTML += `<div class="item"><div class="bottle mL-size"><div class="water"></div></div>${currentMl}mL</div>`;
         }
