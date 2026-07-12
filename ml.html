@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>かさ（水のリットル）クイズ！</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+            background-color: #f0fdf4;
+            color: #333;
+            text-align: center;
+            padding: 15px;
+            margin: 0;
+            /* タブレットでの誤操作（文字選択）を防ぐ */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #16a34a;
+            font-size: 22px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .quiz-box {
+            background-color: #f0fdf4;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border: 2px solid #bbf7d0;
+        }
+        .visual-area {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+            min-height: 130px;
+            align-items: flex-end;
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+        .sub-text {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: normal;
+            margin-top: 2px;
+        }
+        .bottle {
+            width: 60px;
+            border-radius: 5px 5px 10px 10px;
+            border: 3px solid #333;
+            position: relative;
+            background: #e2e8f0;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        .water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #38bdf8;
+            height: 100%;
+        }
+        .L-size { height: 90px; width: 55px; }
+        .dL-size { height: 60px; width: 40px; }
+        .mL-size { height: 35px; width: 28px; }
+
+        /* タブレット用：大きな入力コントロール */
+        .input-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 12px;
+        }
+        .unit-label {
+            font-size: 24px;
+            font-weight: bold;
+            width: 50px;
+            text-align: left;
+            margin-left: 10px;
+        }
+        .counter-btn {
+            width: 55px;
+            height: 55px;
+            font-size: 28px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            transition: transform 0.05s;
+        }
+        .counter-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        .btn-minus { background-color: #ef4444; }
+        .btn-plus { background-color: #3b82f6; }
+        
+        .input-row input {
+            width: 70px;
+            height: 50px;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin: 0 10px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            /* 標準の上下矢印を非表示にする */
+            -moz-appearance: textfield;
+        }
+        .input-row input::-webkit-outer-spin-button,
+        .input-row input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* 下部アクションボタン */
+        .action-area {
+            margin-top: 25px;
+        }
+        .btn-action {
+            background-color: #22c55e;
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #16a34a;
+        }
+        .btn-action:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+        
+        #result {
+            margin-top: 20px;
+            font-size: 32px;
+            font-weight: bold;
+            min-height: 45px;
+        }
+        .correct { color: #ef4444; }
+        .incorrect { color: #3b82f6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>たのしい かさのクイズ まるばつゲーム</h1>
+    
+    <div class="quiz-box">
+        みずのりょう： <span id="target-ml">----</span> ml
+    </div>
+
+    <div class="visual-area" id="visual-area"></div>
+
+    <div class="input-container">
+        <div class="input-row">
+            <button class="counter-btn btn-minus" onclick="changeVal('ans-l', -1)">-</button>
+            <input type="number" id="ans-l" value="0" readonly>
+            <button class="counter-btn btn-plus" onclick="changeVal('ans-l', 1)">+</button>
+            <div class="unit-label">L</div>
+        </div>
+        <div class="input-row">
+            <button class="counter-btn btn-minus" onclick="changeVal('ans-dl', -1)">-</button>
+            <input type="number" id="ans-dl" value="0" readonly>
+            <button class="counter-btn btn-plus" onclick="changeVal('ans-dl', 1)">+</button>
+            <div class="unit-label">dL</div>
+        </div>
+        <div class="input-row">
+            <button class="counter-btn btn-minus" onclick="changeVal('ans-ml', -10)">-</button>
+            <input type="number" id="ans-ml" value="0" readonly>
+            <button class="counter-btn btn-plus" onclick="changeVal('ans-ml', 10)">+</button>
+            <div class="unit-label">mL</div>
+        </div>
+    </div>
+
+    <div class="action-area">
+        <button class="btn-action" onclick="checkAnswer()">こたえあわせ</button>
+        <button class="btn-action" onclick="nextQuestion()" style="background-color: #ba68c8; box-shadow: 0 5px 0 #9c27b0; margin-left: 10px;">つぎへ</button>
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<script>
+    let currentL = 0;
+    let currentDl = 0;
+    let currentMl = 0;
+    let totalMl = 0;
+
+    // ボタンで数値を増減させる関数（タブレット用）
+    function changeVal(id, amount) {
+        const input = document.getElementById(id);
+        let val = parseInt(input.value) || 0;
+        val += amount;
+        if (val < 0) val = 0; // 0未満にはならない
+        input.value = val;
+    }
+
+    function playSound(type) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'correct') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime); 
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.1);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3);
+            osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'incorrect') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4);
+            osc.stop(ctx.currentTime + 0.4);
+        }
+    }
+
+    function nextQuestion() {
+        document.getElementById('result').innerHTML = "";
+        document.getElementById('ans-l').value = "0";
+        document.getElementById('ans-dl').value = "0";
+        document.getElementById('ans-ml').value = "0";
+
+        currentL = Math.floor(Math.random() * 3);
+        currentDl = Math.floor(Math.random() * 10);
+        currentMl = Math.floor(Math.random() * 10) * 10; 
+
+        totalMl = (currentL * 1000) + (currentDl * 100) + currentMl;
+
+        if (totalMl === 0) {
+            nextQuestion();
+            return;
+        }
+
+        document.getElementById('target-ml').innerText = totalMl;
+        generateGraphics();
+    }
+
+    function generateGraphics() {
+        const area = document.getElementById('visual-area');
+        area.innerHTML = "";
+
+        // Lのバケツ
+        for(let i=0; i<currentL; i++) {
+            area.innerHTML += `<div class="item"><div class="bottle L-size"><div class="water"></div></div>1L</div>`;
+        }
+        // dLのコップ（下に (100mL) の補助表記を追加）
+        for(let i=0; i<currentDl; i++) {
+            area.innerHTML += `
+                <div class="item">
+                    <div class="bottle dL-size"><div class="water"></div></div>
+                    1dL
+                    <div class="sub-text">(100mL)</div>
+                </div>`;
+        }
+        // mLのスプーン
+        if (currentMl > 0) {
+            area.innerHTML += `<div class="item"><div class="bottle mL-size"><div class="water"></div></div>${currentMl}mL</div>`;
+        }
+    }
+
+    function checkAnswer() {
+        const userL = parseInt(document.getElementById('ans-l').value) || 0;
+        const userDl = parseInt(document.getElementById('ans-dl').value) || 0;
+        const userMl = parseInt(document.getElementById('ans-ml').value) || 0;
+
+        const resultDiv = document.getElementById('result');
+
+        if (userL === currentL && userDl === currentDl && userMl === currentMl) {
+            resultDiv.innerHTML = "<span class='correct'>🔴 せいかい！ すごい！</span>";
+            playSound('correct');
+        } else {
+            resultDiv.innerHTML = "<span class='incorrect'>❌ ざんねん！ もういちど！</span>";
+            playSound('incorrect');
+        }
+    }
+
+    nextQuestion();
+</script>
+
+</body>
+</html>
