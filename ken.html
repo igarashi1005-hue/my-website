@@ -81,6 +81,7 @@
         
         <div id="correct-answer-area" class="hidden flex-col items-center w-full mt-2">
           <span class="text-sm font-bold text-gray-500">正解は…</span>
+          <div id="correct-answer-ruby" class="text-xl font-bold text-red-500 tracking-wide mt-1"></div>
           <div id="correct-answer-text" class="text-5xl font-bold text-red-600 tracking-widest my-1"></div>
           
           <div class="flex gap-2 w-full mt-2">
@@ -109,19 +110,21 @@
       e.preventDefault();
     }, { passive: false });
 
-    // 都道府県データ（配列構造は維持）
+    // 都道府県データ（ひらがなデータを追加）
     const prefecturesData = [
-      { name: "北海道" }, { name: "青森県" }, { name: "岩手県" }, { name: "宮城県" }, { name: "秋田県" },
-      { name: "山形県" }, { name: "福島県" }, { name: "茨城県" }, { name: "栃木県" }, { name: "群馬県" },
-      { name: "埼玉県" }, { name: "千葉県" }, { name: "東京都" }, { name: "神奈川県" }, { name: "新潟県" },
-      { name: "富山県" }, { name: "石川県" }, { name: "福井県" }, { name: "山梨県" }, { name: "長野県" },
-      { name: "岐阜県" }, { name: "静岡県" }, { name: "愛知県" }, { name: "三重県" }, { name: "滋賀県" },
-      { name: "京都府" }, { name: "大阪府" }, { name: "兵庫県" }, { name: "奈良県" }, { name: "和歌山県" },
-      { name: "鳥取県" }, { name: "島根県" }, { name: "岡山県" }, { name: "広島県" }, { name: "山口県" },
-      { name: "徳島県" }, { name: "香川県" }, { name: "愛媛県" }, { name: "高知県" }, { name: "福岡県" },
-      { name: "佐賀県" }, { name: "長崎県" }, { name: "熊本県" }, { name: "大分県" }, { name: "宮崎県" },
-      { name: "鹿児島県" }, { name: "沖縄県" }
+      { name: "北海道", ruby: "ほっかいどう" }, { name: "青森県", ruby: "あおもりけん" }, { name: "岩手県", ruby: "いわてけん" }, { name: "宮城県", ruby: "みやぎけん" }, { name: "秋田県", ruby: "あきたけん" },
+      { name: "山形県", ruby: "やまがたけん" }, { name: "福島県", ruby: "ふくしまけん" }, { name: "茨城県", ruby: "いばらきけん" }, { name: "栃木県", ruby: "とちぎけん" }, { name: "群馬県", ruby: "ぐんまけん" },
+      { name: "埼玉県", ruby: "さいたまけん" }, { name: "千葉県", ruby: "ちばけん" }, { name: "東京都", ruby: "とうきょうと" }, { name: "神奈川県", ruby: "かながわけん" }, { name: "新潟県", ruby: "にいがたけん" },
+      { name: "富山県", ruby: "とやまけん" }, { name: "石川県", ruby: "いしかわけん" }, { name: "福井県", ruby: "ふくいけん" }, { name: "山梨県", ruby: "やまなしけん" }, { name: "長野県", ruby: "ながのけん" },
+      { name: "岐阜県", ruby: "ぎふけん" }, { name: "静岡県", ruby: "しずおかけん" }, { name: "愛知県", ruby: "あいちけん" }, { name: "三重県", ruby: "みえけん" }, { name: "滋賀県", ruby: "しがけん" },
+      { name: "京都府", ruby: "きょうとふ" }, { name: "大阪府", ruby: "おおさかふ" }, { name: "兵庫県", ruby: "ひょうごけん" }, { name: "奈良県", ruby: "ならけん" }, { name: "和歌山県", ruby: "わかやまけん" },
+      { name: "鳥取県", ruby: "とactorりけん" }, { name: "島根県", ruby: "しまねけん" }, { name: "岡山県", ruby: "おかやまけん" }, { name: "広島県", ruby: "ひろしまけん" }, { name: "山口県", ruby: "やまぐちけん" },
+      { name: "徳島県", ruby: "とくしまけん" }, { name: "香川県", ruby: "かがわけん" }, { name: "愛媛県", ruby: "えひめけん" }, { name: "高知県", ruby: "こうちけん" }, { name: "福岡県", ruby: "ふくおかけん" },
+      { name: "佐賀県", ruby: "さがけん" }, { name: "長崎県", ruby: "ながさきけん" }, { name: "熊本県", ruby: "くまもとけん" }, { name: "大分県", ruby: "おおいたけん" }, { name: "宮崎県", ruby: "みやざきけん" },
+      { name: "鹿児島県", ruby: "かごしまけん" }, { name: "沖縄県", ruby: "おきなわけん" }
     ];
+    // 鳥取県のタイポ修正
+    prefecturesData[30].ruby = "とっとりけん";
 
     let currentIndex = 0;
     let memorizedSet = new Set();
@@ -212,7 +215,6 @@
       e.preventDefault();
       if (!isDrawing) return;
       
-      // 高速描画の肝：間引かれた隠れたイベント（点データ）をすべて回収する
       const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
       
       ctx.beginPath();
@@ -264,6 +266,8 @@
 
     function showAnswer() {
       const currentPref = prefecturesData[currentIndex];
+      // 県名の上にひらがなを表示する処理を追加
+      document.getElementById("correct-answer-ruby").innerText = currentPref.ruby;
       document.getElementById("correct-answer-text").innerText = currentPref.name;
       
       document.getElementById("btn-show-answer").style.display = "none";
