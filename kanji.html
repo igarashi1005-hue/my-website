@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>漢字テスト練習アプリ</title>
+<title>漢字ドリルアプリ</title>
 <style>
   body { 
     font-family: sans-serif; 
@@ -71,7 +71,7 @@
 
 <div id="file-selector-modal" onclick="closeModal()">
   <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-title">もんだい を えらぶ</div>
+    <div class="modal-title">ドリル を えらぶ</div>
     <div class="file-list" id="modal-file-list">
       </div>
     <button class="close-modal-btn" onclick="closeModal()">とじる</button>
@@ -80,25 +80,25 @@
 
 <div id="main-layout">
   <div class="top-controls">
-    <button class="load-btn" onclick="openFileSelector()">もんだいを切りかえる</button>
+    <button class="load-btn" onclick="openFileSelector()">ドリルをきりかえる</button>
   </div>
 
   <div class="control-container">
-    <button class="reset-btn" onclick="resetQuiz()">最初に戻る</button>
-    <button class="forget-btn" onclick="forgetAll()">覚えたことを忘れる</button>
+    <button class="reset-btn" onclick="resetQuiz()">はじめのドリルにもどる</button>
+    <button class="forget-btn" onclick="forgetAll()">ドリルのきろくを消す</button>
   </div>
   
   <div class="status-container">
     <div>
       <span id="file-name-display">[ なし ]</span>
-      <span id="progress-display">しんちょく: 0 / 0</span>
+      <span id="progress-display">ドリルしんちょく: 0 / 0</span>
     </div>
-    <div class="version">v1.4.4</div>
+    <div class="version">v1.5.0</div>
   </div>
 
   <div id="question-box">
-    <div id="question">もんだい を えらんでね</div>
-    <div id="hints">の上の「もんだいを切りかえる」ボタンから<br>CSVファイルをえらんでください。</div>
+    <div id="question">ドリル を えらんでね</div>
+    <div id="hints">の上の「ドリルをきりかえる」ボタンから<br>CSVファイルをえらんでください。</div>
   </div>
 
   <canvas id="canvas" width="280" height="280"></canvas>
@@ -117,7 +117,7 @@
       <button class="action-btn check" onclick="showAnswer()">こたえを見る</button>
       <button class="action-btn learned" onclick="markAsLearned()">覚えた！</button>
     </div>
-    <button class="next" onclick="nextQuestion()">次の問題へ</button>
+    <button class="next" onclick="nextQuestion()">つぎのドリルへ</button>
   </div>
 </div>
 
@@ -126,7 +126,7 @@
     e.preventDefault();
   });
 
-  // ★増えたすべてのファイル（1年〜6年まで計23個）を登録
+  // すべてのファイル名
   const csvFiles = [
     "小学1年生その1", "小学1年生その2",
     "小学2年生その1", "小学2年生その2", "小学2年生その3", "小学2年生その4",
@@ -153,55 +153,60 @@
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // ★ペンの高周波サンプリング最適化
-  canvas.addEventListener('pointerdown', (e) => { 
-    e.preventDefault();
-    if (e.pointerType !== 'pen') return;
-    painting = true; 
-    
+  // ★ken.html の描画ロジックを統合（タッチ・ペン対応の安定化）
+  function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
+    const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+    const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+    
+    // kanji.html のスケール調整は保持
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    lastX = (e.clientX - rect.left) * scaleX;
-    lastY = (e.clientY - rect.top) * scaleY;
-  });
-
-  canvas.addEventListener('pointermove', (e) => {
-    e.preventDefault();
-    if (!painting || e.pointerType !== 'pen') return;
     
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  }
 
-    // e.getCoalescedEvents を使って間引かれた高解像度なペンの軌跡データをすべて抽出
-    const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    
-    for (let ev of events) {
-      const x = (ev.clientX - rect.left) * scaleX;
-      const y = (ev.clientY - rect.top) * scaleY;
-      
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      
-      lastX = x;
-      lastY = y;
-    }
-  });
+  function startDrawing(e) {
+    e.preventDefault();
+    painting = true;
+    const pos = getCoordinates(e);
+    lastX = pos.x;
+    lastY = pos.y;
+  }
 
-  canvas.addEventListener('pointerup', (e) => { 
+  function draw(e) {
     e.preventDefault();
-    painting = false; 
-    ctx.beginPath(); 
-  });
-  
-  canvas.addEventListener('pointerout', (e) => {
-    e.preventDefault();
+    if (!painting) return;
+    const pos = getCoordinates(e);
+
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+
+    lastX = pos.x;
+    lastY = pos.y;
+  }
+
+  function stopDrawing() {
     painting = false;
     ctx.beginPath();
-  });
+  }
+
+  // マウス・タッチ・ペンすべてのイベントに対応 (ken.html 方式)
+  canvas.addEventListener('mousedown', startDrawing);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDrawing);
+  canvas.addEventListener('mouseout', stopDrawing);
+
+  canvas.addEventListener('touchstart', startDrawing, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', stopDrawing);
+  canvas.addEventListener('touchcancel', stopDrawing);
+
 
   function clearCanvas() { 
     ctx.clearRect(0, 0, canvas.width, canvas.height); 
@@ -302,7 +307,7 @@
 
   function updateProgressDisplay() {
     document.getElementById('file-name-display').innerText = currentFileName ? `[ ${currentFileName} ]` : "[ なし ]";
-    document.getElementById('progress-display').innerText = `しんちょく: ${learnedSet.size} / ${quizData.length}`;
+    document.getElementById('progress-display').innerText = `ドリルしんちょく: ${learnedSet.size} / ${quizData.length}`;
   }
 
   function markAsLearned() {
@@ -310,8 +315,8 @@
     learnedSet.add(activeIndices[currentActivePointer]);
     rebuildActiveList(false);
     if (activeIndices.length === 0) {
-      document.getElementById('question').innerText = "ぜんぶクリア！";
-      document.getElementById('hints').innerHTML = "おめでとう！";
+      document.getElementById('question').innerText = "ドリルを すべて クリア！";
+      document.getElementById('hints').innerHTML = "おめでとう！ぜんぶ覚えたよ！";
       clearCanvas();
     } else {
       if (currentActivePointer >= activeIndices.length) currentActivePointer = 0;
@@ -333,7 +338,7 @@
 
   function forgetAll() {
     if (quizData.length === 0) return;
-    if (confirm("きろくを すべて けしますか？")) {
+    if (confirm("ドリルのきろくを すべて けしますか？")) {
       learnedSet.clear();
       rebuildActiveList(true);
       updateQuestion();
@@ -344,7 +349,7 @@
     if (quizData.length === 0) return;
     if (activeIndices.length === 0) rebuildActiveList(true);
     const originalIdx = activeIndices[currentActivePointer];
-    document.getElementById('question').innerText = "もんだい " + (originalIdx + 1);
+    document.getElementById('question').innerText = "ドリル番号 " + (originalIdx + 1);
     document.getElementById('hints').innerHTML = quizData[originalIdx].q.join("<br>");
     clearCanvas();
   }
