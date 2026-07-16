@@ -153,23 +153,21 @@
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // ★ken.html の描画ロジックを統合（タッチ・ペン対応の安定化）
+  // ★マウスを無効化し、ペンと指タッチのみ許可する描画ロジック
   function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
-    const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
-    
-    // kanji.html のスケール調整は保持
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
     };
   }
 
   function startDrawing(e) {
+    // マウスでの操作を弾く（Surface等のマウスを無効化）
+    if (e.pointerType === 'mouse') return;
+    
     e.preventDefault();
     painting = true;
     const pos = getCoordinates(e);
@@ -178,6 +176,9 @@
   }
 
   function draw(e) {
+    // マウスでの操作を弾く
+    if (e.pointerType === 'mouse') return;
+    
     e.preventDefault();
     if (!painting) return;
     const pos = getCoordinates(e);
@@ -191,22 +192,18 @@
     lastY = pos.y;
   }
 
-  function stopDrawing() {
+  function stopDrawing(e) {
+    if (e.pointerType === 'mouse') return;
     painting = false;
     ctx.beginPath();
   }
 
-  // マウス・タッチ・ペンすべてのイベントに対応 (ken.html 方式)
-  canvas.addEventListener('mousedown', startDrawing);
-  canvas.addEventListener('mousemove', draw);
-  canvas.addEventListener('mouseup', stopDrawing);
-  canvas.addEventListener('mouseout', stopDrawing);
-
-  canvas.addEventListener('touchstart', startDrawing, { passive: false });
-  canvas.addEventListener('touchmove', draw, { passive: false });
-  canvas.addEventListener('touchend', stopDrawing);
-  canvas.addEventListener('touchcancel', stopDrawing);
-
+  // PointerEventとして登録（iPadのApple PencilもSurface Penもこれで安定して動作します）
+  canvas.addEventListener('pointerdown', startDrawing, { passive: false });
+  canvas.addEventListener('pointermove', draw, { passive: false });
+  canvas.addEventListener('pointerup', stopDrawing);
+  canvas.addEventListener('pointerout', stopDrawing);
+  canvas.addEventListener('pointercancel', stopDrawing);
 
   function clearCanvas() { 
     ctx.clearRect(0, 0, canvas.width, canvas.height); 
