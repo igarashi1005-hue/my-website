@@ -22,10 +22,7 @@
     
     #drawing-pad {
       touch-action: none;
-      background-image: 
-        linear-gradient(transparent 49%, #cbd5e1 49%, #cbd5e1 51%, transparent 51%),
-        linear-gradient(90deg, transparent 49%, #cbd5e1 49%, #cbd5e1 51%, transparent 51%);
-      background-size: 100% 100%;
+      /* Edgeでの黒画面バグ対策のため、背景の十字線はCSSではなくCanvasAPIで直接描画します */
     }
   </style>
 </head>
@@ -118,13 +115,11 @@
       { name: "富山県", ruby: "とやまけん" }, { name: "石川県", ruby: "いしかわけん" }, { name: "福井県", ruby: "ふくいけん" }, { name: "山梨県", ruby: "やまなしけん" }, { name: "長野県", ruby: "ながのけん" },
       { name: "岐阜県", ruby: "ぎふけん" }, { name: "静岡県", ruby: "しずおかけん" }, { name: "愛知県", ruby: "あいちけん" }, { name: "三重県", ruby: "みえけん" }, { name: "滋賀県", ruby: "しがけん" },
       { name: "京都府", ruby: "きょうとふ" }, { name: "大阪府", ruby: "おおさかふ" }, { name: "兵庫県", ruby: "ひょうごけん" }, { name: "奈良県", ruby: "ならけん" }, { name: "和歌山県", ruby: "わかやまけん" },
-      { name: "鳥取県", ruby: "とactorりけん" }, { name: "島根県", ruby: "しまねけん" }, { name: "岡山県", ruby: "おかやまけん" }, { name: "広島県", ruby: "ひろしまけん" }, { name: "山口県", ruby: "やまぐちけん" },
+      { name: "鳥取県", ruby: "とっとりけん" }, { name: "島根県", ruby: "しまねけん" }, { name: "岡山県", ruby: "おかやまけん" }, { name: "広島県", ruby: "ひろしまけん" }, { name: "山口県", ruby: "やまぐちけん" },
       { name: "徳島県", ruby: "とくしまけん" }, { name: "香川県", ruby: "かがわけん" }, { name: "愛媛県", ruby: "えひめけん" }, { name: "高知県", ruby: "こうちけん" }, { name: "福岡県", ruby: "ふくおかけん" },
       { name: "佐賀県", ruby: "さがけん" }, { name: "長崎県", ruby: "ながさきけん" }, { name: "熊本県", ruby: "くまもとけん" }, { name: "大分県", ruby: "おおいたけん" }, { name: "宮崎県", ruby: "みやざきけん" },
       { name: "鹿児島県", ruby: "かごしまけん" }, { name: "沖縄県", ruby: "おきなわけん" }
     ];
-    // 鳥取県のタイポ修正
-    prefecturesData[30].ruby = "とっとりけん";
 
     let currentIndex = 0;
     let memorizedSet = new Set();
@@ -186,15 +181,11 @@
 
     // --- 超低遅延・高速追従キャンバス処理 ---
     const canvas = document.getElementById("drawing-pad");
-    const ctx = canvas.getContext("2d", { desynchronized: true });
+    // Edgeの真っ黒バグ対策: alpha: false を指定して透過を無効化する
+    const ctx = canvas.getContext("2d", { desynchronized: true, alpha: false });
     let isDrawing = false;
     let lastX = 0;
     let lastY = 0;
-
-    ctx.lineWidth = 3; 
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#1e293b"; 
 
     function getCanvasPos(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
@@ -246,8 +237,29 @@
     canvas.addEventListener('touchend', function(e) { e.preventDefault(); }, { passive: false });
 
     function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // 背景を白で塗りつぶす（alpha: false対策）
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 十字のガイド線を引く（CSSのグラデーションの代わり）
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+
+      // ペンの描画設定に戻す
+      ctx.lineWidth = 3; 
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#1e293b"; 
     }
+
+    // 初期読み込み時にキャンバスを白く塗りつぶし、十字線を引く
+    clearCanvas();
 
     function loadQuestion() {
       const currentPref = prefecturesData[currentIndex];
@@ -266,7 +278,6 @@
 
     function showAnswer() {
       const currentPref = prefecturesData[currentIndex];
-      // 県名の上にひらがなを表示する処理を追加
       document.getElementById("correct-answer-ruby").innerText = currentPref.ruby;
       document.getElementById("correct-answer-text").innerText = currentPref.name;
       
