@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#fff7ed">
+<title>九九ドリル</title>
+<style>
+:root{
+  --bg:#fff7ed; --card:#ffffff; --ink:#3b2f2a; --sub:#8a7a70;
+  --line:#f0e1d2; --shadow:0 4px 0 rgba(0,0,0,.10);
+  --pink:#ff7a9c; --blue:#4aa8ff; --green:#3fc48b; --yellow:#ffc53d; --purple:#a880ff;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN",-apple-system,"BIZ UDPGothic","Yu Gothic UI","Meiryo",sans-serif;
+  overscroll-behavior:none; touch-action:manipulation; user-select:none; -webkit-user-select:none;
+}
+#app{height:100dvh; display:flex; flex-direction:column; overflow:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.screen{display:none; flex:1; min-height:0; flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ---------- 共通パーツ ---------- */
+.btn{
+  border:none; border-radius:20px; font:inherit; font-weight:700; color:#fff;
+  padding:16px 18px; box-shadow:var(--shadow); cursor:pointer; transition:transform .06s;
+}
+.btn:active{transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.10);}
+.btn.pink{background:var(--pink);} .btn.blue{background:var(--blue);}
+.btn.green{background:var(--green);} .btn.yellow{background:var(--yellow); color:#5a4200;}
+.btn.purple{background:var(--purple);}
+.btn.ghost{background:#fff; color:var(--sub); box-shadow:0 3px 0 var(--line);}
+
+/* ---------- ホーム ---------- */
+#home{overflow-y:auto; padding:22px 18px 30px; align-items:center;}
+.title{font-size:34px; font-weight:800; letter-spacing:.06em; margin:6px 0 2px; color:#ff6b8a;}
+.title small{display:block; font-size:14px; color:var(--sub); font-weight:700; letter-spacing:.2em; margin-top:4px;}
+.stats{width:100%; max-width:460px; background:var(--card); border-radius:22px; padding:14px; margin:18px 0 6px;
+  box-shadow:0 3px 0 var(--line); display:flex; gap:8px; text-align:center;}
+.stat{flex:1;} .stat b{display:block; font-size:26px; line-height:1.1; color:var(--pink);}
+.stat span{font-size:11px; color:var(--sub);}
+.stat.b b{color:var(--blue);} .stat.g b{color:var(--green);}
+.menu{width:100%; max-width:460px; display:flex; flex-direction:column; gap:14px; margin-top:16px;}
+.menu .btn{font-size:22px; padding:22px 18px; border-radius:26px;}
+.menu .btn em{display:block; font-style:normal; font-size:12px; font-weight:600; opacity:.9; margin-top:4px;}
+.settings{width:100%; max-width:460px; margin-top:20px; background:var(--card); border-radius:20px; padding:6px 16px; box-shadow:0 3px 0 var(--line);}
+.settings summary{list-style:none; cursor:pointer; padding:12px 0; font-weight:700; color:var(--sub); font-size:15px;}
+.settings summary::-webkit-details-marker{display:none;}
+.row{display:flex; align-items:center; gap:10px; padding:8px 0 14px; flex-wrap:wrap;}
+.row .lab{font-size:13px; color:var(--sub); width:72px;}
+.sw{width:34px; height:34px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 0 2px var(--line); cursor:pointer;}
+.sw.on{box-shadow:0 0 0 3px var(--ink);}
+.pw{width:52px; height:34px; border-radius:12px; background:#fff; box-shadow:0 0 0 2px var(--line);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;}
+.pw.on{box-shadow:0 0 0 3px var(--ink);}
+.pw i{display:block; background:var(--ink); border-radius:99px;}
+.toggle{margin-left:auto; padding:8px 16px; border-radius:14px; border:none; font:inherit; font-weight:700;
+  background:#eee; color:#999; cursor:pointer;}
+.toggle.on{background:var(--green); color:#fff;}
+.foot{font-size:11px; color:#c3b3a7; margin-top:18px; text-align:center;}
+
+/* ---------- 段えらび ---------- */
+#pick{padding:18px; overflow-y:auto;}
+.pick-h{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.pick-h h2{font-size:20px; margin:0;}
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:460px; margin:14px auto 0;}
+.grid .btn{font-size:20px; padding:26px 6px;}
+.grid .btn.wide{grid-column:1/-1; font-size:18px; padding:18px;}
+
+/* ---------- 練習 ---------- */
+#play{padding:8px 12px 10px;}
+.bar{display:flex; align-items:center; gap:10px; padding:4px 2px 8px;}
+.iconbtn{border:none; background:#fff; box-shadow:0 3px 0 var(--line); border-radius:14px; padding:8px 14px;
+  font:inherit; font-weight:700; color:var(--sub); font-size:14px; cursor:pointer;}
+.prog{margin-left:auto; font-size:14px; font-weight:700; color:var(--sub);}
+.prog .ok{color:var(--green);}
+
+.qbox{background:var(--card); border-radius:22px; box-shadow:0 3px 0 var(--line); padding:14px 16px; text-align:center;}
+.qmath{font-size:min(15vw,58px); font-weight:800; letter-spacing:.04em; line-height:1.1;}
+.qmath .eq{color:var(--sub);}
+.qtext{font-size:min(4.6vw,19px); line-height:1.75; text-align:left; font-weight:600;}
+.qhint{font-size:13px; color:var(--sub); margin-top:8px;}
+
+.padwrap{position:relative; flex:1; min-height:0; margin:10px 0;}
+#pad{
+  width:100%; height:100%; display:block; border-radius:22px; background:#fff;
+  background-image:linear-gradient(var(--line) 1px, transparent 1px),
+                   linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size:100% 50%, 33.333% 100%;
+  box-shadow:0 3px 0 var(--line); touch-action:none; cursor:crosshair;
+}
+.placeholder{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:#e2d3c6; font-size:18px; font-weight:700; pointer-events:none;}
+#fx{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+
+.answer{background:#fff8e6; border:3px dashed var(--yellow); border-radius:22px; padding:12px 14px; text-align:center; margin-bottom:10px;}
+.answer .big{font-size:min(12vw,46px); font-weight:800; color:#e08a00;}
+.answer .read{font-size:15px; color:#a2803a; margin-top:2px;}
+.answer .shiki{font-size:15px; color:#a2803a;}
+.speak{margin-top:8px; border:none; background:#fff; box-shadow:0 3px 0 #f0dfae; border-radius:14px;
+  padding:8px 16px; font:inherit; font-weight:700; color:#c98b00; cursor:pointer;}
+.selfcheck{display:flex; gap:10px; margin-top:10px;}
+.selfcheck .btn{flex:1; font-size:17px; padding:14px 8px;}
+.controls{display:flex; gap:10px;}
+.controls .btn{flex:1; font-size:min(4.6vw,18px); padding:18px 4px; border-radius:22px; white-space:nowrap;}
+.hidden{display:none !important;}
+
+.done{position:fixed; inset:0; z-index:50; background:rgba(255,247,237,.97);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:20px;}
+.done h3{font-size:30px; margin:0; color:var(--pink);}
+.done p{margin:0; color:var(--sub); font-weight:700;}
+.done .btn{min-width:200px;}
+
+/* 花丸アニメ */
+#maru{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
+#maru svg{width:52%; max-width:280px;}
+#maru circle{fill:none; stroke:#ff5577; stroke-width:7; stroke-linecap:round;
+  stroke-dasharray:1000; stroke-dashoffset:1000; animation:draw .55s ease forwards;}
+#maru circle.c2{stroke-width:5; animation-delay:.18s;}
+@keyframes draw{to{stroke-dashoffset:0;}}
+.fade{animation:fadeout .5s ease 1.6s forwards;}
+@keyframes fadeout{to{opacity:0;}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ ホーム ============ -->
+  <section id="home" class="screen active">
+    <div class="title">九九ドリル<small>てがきで れんしゅう</small></div>
+
+    <div class="stats">
+      <div class="stat"><b id="s-today">0</b><span>きょう といた</span></div>
+      <div class="stat g"><b id="s-ok">0</b><span>きょう せいかい</span></div>
+      <div class="stat b"><b id="s-streak">0</b><span>れんぞくせいかい</span></div>
+    </div>
+    <div id="s-days" class="foot" style="margin-top:8px"></div>
+
+    <div class="menu">
+      <button class="btn pink" data-go="dan">1の段から九九<em>1×1から じゅんばんに</em></button>
+      <button class="btn blue" data-go="rand">ランダムで九九<em>ぜんぶの だんから ばらばらに</em></button>
+      <button class="btn green" data-go="word">九九問題<em>ぶんしょうだい・だんも かずも ランダム</em></button>
+    </div>
+
+    <details class="settings">
+      <summary>⚙️ ペンと おんせいの せってい</summary>
+      <div class="row">
+        <span class="lab">ペンの いろ</span>
+        <div id="colors" style="display:flex; gap:10px; flex-wrap:wrap"></div>
+      </div>
+      <div class="row">
+        <span class="lab">ペンの ふとさ</span>
+        <div id="widths" style="display:flex; gap:10px"></div>
+      </div>
+      <div class="row">
+        <span class="lab">よみあげ</span>
+        <button id="voiceBtn" class="toggle on">オン</button>
+      </div>
+    </details>
+
+    <div class="foot">こたえは めで あわせてね。<br>データは この たんまつに ほぞんされます。</div>
+  </section>
+
+  <!-- ============ 段えらび ============ -->
+  <section id="pick" class="screen">
+    <div class="pick-h">
+      <button class="iconbtn" data-back>← もどる</button>
+      <h2 id="pick-title">なんの だんに する？</h2>
+    </div>
+    <div id="dangrid" class="grid"></div>
+  </section>
+
+  <!-- ============ 練習 ============ -->
+  <section id="play" class="screen">
+    <div class="bar">
+      <button class="iconbtn" data-back>← もどる</button>
+      <span id="modeLabel" class="iconbtn" style="pointer-events:none"></span>
+      <span class="prog"><span id="progNum">1</span> / <span id="progTot">9</span>　<span class="ok">◎<span id="okNum">0</span></span></span>
+    </div>
+
+    <div class="qbox" id="qbox"></div>
+
+    <div class="padwrap">
+      <canvas id="pad"></canvas>
+      <div class="placeholder" id="ph">ここに こたえを かいてね</div>
+      <canvas id="fx"></canvas>
+      <div id="maru" class="hidden"></div>
+      <div id="doneBox" class="done hidden"></div>
+    </div>
+
+    <div class="answer hidden" id="answerBox"></div>
+    <div class="selfcheck hidden" id="selfBox">
+      <button class="btn green" id="btnOK">○ あってた！</button>
+      <button class="btn ghost" id="btnNG">× まちがえた</button>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="btn yellow" id="btnCheck">こたえあわせ</button>
+      <button class="btn ghost" id="btnClear">やりなおし</button>
+      <button class="btn blue" id="btnNext">つぎへ →</button>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* ==========================================================
+   1. データ： 九九の となえかた（よみあげ用）
+   ========================================================== */
+const KUKU_READ = [
+ ["いんいちがいち","いんにがに","いんさんがさん","いんしがし","いんごがご","いんろくがろく","いんしちがしち","いんはちがはち","いんくがく"],
+ ["にいちがに","ににんがし","にさんがろく","にしがはち","にごじゅう","にろくじゅうに","にしちじゅうし","にはちじゅうろく","にくじゅうはち"],
+ ["さんいちがさん","さんにがろく","さざんがく","さんしじゅうに","さんごじゅうご","さぶろくじゅうはち","さんしちにじゅういち","さんぱにじゅうし","さんくにじゅうしち"],
+ ["しいちがし","しにがはち","しさんじゅうに","ししじゅうろく","しごにじゅう","しろくにじゅうし","しちにじゅうはち","しはさんじゅうに","しくさんじゅうろく"],
+ ["ごいちがご","ごにじゅう","ごさんじゅうご","ごしにじゅう","ごごにじゅうご","ごろくさんじゅう","ごしちさんじゅうご","ごはしじゅう","ごっくしじゅうご"],
+ ["ろくいちがろく","ろくにじゅうに","ろくさんじゅうはち","ろくしにじゅうし","ろくごさんじゅう","ろくろくさんじゅうろく","ろくしちしじゅうに","ろくはしじゅうはち","ろっくごじゅうし"],
+ ["しちいちがしち","しちにじゅうし","しちさんにじゅういち","しちしにじゅうはち","しちごさんじゅうご","しちろくしじゅうに","しちしちしじゅうく","しちはごじゅうろく","しちくろくじゅうさん"],
+ ["はちいちがはち","はちにじゅうろく","はちさんにじゅうし","はちしさんじゅうに","はちごしじゅう","はちろくしじゅうはち","はちしちごじゅうろく","はっぱろくじゅうし","はっくしちじゅうに"],
+ ["くいちがく","くにじゅうはち","くさんにじゅうしち","くしさんじゅうろく","くごしじゅうご","くろくごじゅうし","くしちろくじゅうさん","くはしちじゅうに","くくはちじゅういち"]
+];
+const NUM_YOMI = ["","いち","に","さん","し","ご","ろく","しち","はち","く"];
+
+/* ==========================================================
+   2. データ： 文章題（だんも かけるかずも ランダムに つくる）
+   ========================================================== */
+/* --- どの だんでも つかえる ひな形（a：1つぶん、b：いくつぶん） --- */
+const WORD_GEN = [
+ (a,b)=>`1さらに ${a}こずつ いちごを のせます。${b}さらでは、いちごは ぜんぶで なんこですか。`,
+ (a,b)=>`1はこに ${a}こずつ ケーキが 入っています。${b}はこでは なんこですか。`,
+ (a,b)=>`1ふくろに ${a}こずつ あめが 入っています。${b}ふくろでは なんこですか。`,
+ (a,b)=>`1かごに ${a}こずつ みかんが 入っています。${b}かごでは なんこですか。`,
+ (a,b)=>`1人に ${a}こずつ りんごを あげます。${b}人に あげたら、ぜんぶで なんこの りんごが ひつようですか。`,
+ (a,b)=>`1人に ${a}こずつ どんぐりを くばります。${b}人ぶんでは なんこ いりますか。`,
+ (a,b)=>`1人に ${a}まいずつ シールを くばります。${b}人ぶんでは なんまい いりますか。`,
+ (a,b)=>`1たばに ${a}本ずつ えんぴつが あります。${b}たばでは なん本ですか。`,
+ (a,b)=>`1はこに ${a}本ずつ クレヨンが 入っています。${b}はこでは なん本ですか。`,
+ (a,b)=>`1つの はなたばに はなを ${a}本ずつ 入れます。${b}たばでは なん本 いりますか。`,
+ (a,b)=>`1れつに ${a}人ずつ ならびます。${b}れつでは ぜんぶで なん人ですか。`,
+ (a,b)=>`1こ ${a}円の あめを ${b}こ かいます。ぜんぶで なん円ですか。`,
+ (a,b)=>`1日に ${a}ページずつ ほんを よみます。${b}日では なんページ よめますか。`,
+ (a,b)=>`1さらに ${a}きれずつ りんごを のせます。${b}さらでは なんきれですか。`,
+ (a,b)=>`おかしの はこが ${b}はこ あります。1はこに ${a}こずつ 入っていると、ぜんぶで なんこですか。`,
+ (a,b)=>`1つの コップに あめを ${a}こ 入れます。コップが ${b}こ あると、あめは なんこ いりますか。`
+];
+/* --- その だんならではの ひな形（a は きまっている・b は ランダム） --- */
+const WORD_FIXED = {
+ 1:[b=>`ねこ1ぴきの しっぽは 1本です。ねこが ${b}ひき いると、しっぽは ぜんぶで なん本ですか。`],
+ 2:[b=>`じてんしゃの タイヤは 2つです。じてんしゃが ${b}だい あると、タイヤは ぜんぶで いくつですか。`,
+    b=>`ねこ1ぴきの みみは 2つです。ねこが ${b}ひき いると、みみは ぜんぶで いくつですか。`],
+ 3:[b=>`さんりんしゃの タイヤは 3つです。さんりんしゃが ${b}だいでは、タイヤは ぜんぶで いくつですか。`],
+ 4:[b=>`くるま1だいの タイヤは 4つです。くるまが ${b}だいでは、タイヤは ぜんぶで いくつですか。`,
+    b=>`いぬ1ぴきの あしは 4本です。いぬが ${b}ひき いると、あしは ぜんぶで なん本ですか。`],
+ 5:[b=>`かたての ゆびは 5本です。${b}人ぶんの かたてでは、ゆびは ぜんぶで なん本ですか。`,
+    b=>`5円玉が ${b}まい あります。ぜんぶで なん円ですか。`],
+ 6:[b=>`むし1ぴきの あしは 6本です。むしが ${b}ひき いると、あしは ぜんぶで なん本ですか。`,
+    b=>`たまごは 1パックに 6こ 入っています。${b}パックでは なんこですか。`],
+ 7:[b=>`1しゅうかんは 7日です。${b}しゅうかんでは なん日ですか。`],
+ 8:[b=>`たこ1ぴきの あしは 8本です。たこが ${b}ひき いると、あしは ぜんぶで なん本ですか。`],
+ 9:[b=>`やきゅうの チームは 1チーム 9人です。${b}チームでは ぜんぶで なん人ですか。`]
+};
+function rnd9(){ return 1 + (Math.random()*9|0); }
+function pickOne(arr){ return arr[(Math.random()*arr.length)|0]; }
+/* おなじ ひな形が 1セットの なかで かぶらないように えらぶ */
+function makeWordText(a, b, usedTpl){
+  const cands = [];
+  const f = WORD_FIXED[a];
+  if(f && b > 1) f.forEach((fn,i) => cands.push({id:"f"+a+"-"+i, fn:() => fn(b), fixed:true}));
+  WORD_GEN.forEach((fn,i) => cands.push({id:"g"+i, fn:() => fn(a,b), fixed:false}));
+
+  let pool = cands.filter(c => !usedTpl[c.id]);
+  if(pool.length === 0) pool = cands;
+  const fixedPool = pool.filter(c => c.fixed), genPool = pool.filter(c => !c.fixed);
+  const use = (fixedPool.length && (Math.random() < 0.4 || genPool.length === 0))
+              ? pickOne(fixedPool) : pickOne(genPool.length ? genPool : fixedPool);
+  usedTpl[use.id] = 1;
+  return use.fn();
+}
+/* だんも かけるかずも ランダムに n もん つくる（おなじ しきは でない） */
+function makeWordSet(n){
+  const used = {}, usedTpl = {}, out = [];
+  let guard = 0;
+  while(out.length < n && guard++ < 400){
+    const a = rnd9(), b = rnd9(), key = a + "x" + b;
+    if(used[key]) continue;
+    used[key] = 1;
+    out.push({a:a, b:b, text: makeWordText(a, b, usedTpl)});
+  }
+  return out;
+}
+
+/* ==========================================================
+   3. せってい・きろく（localStorage）
+   ========================================================== */
+const KEY = "kuku-drill-v1";
+const DEF = {color:"#333333", width:8, voice:true,
+             day:"", today:0, todayOK:0, streak:0, best:0, total:0, totalOK:0, days:0, lastActive:""};
+let cfg = Object.assign({}, DEF);
+
+function todayStr(d){ d = d || new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function yesterdayStr(){ const d = new Date(); d.setDate(d.getDate()-1); return todayStr(d); }
+
+function loadCfg(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) cfg = Object.assign({}, DEF, JSON.parse(raw)); }catch(e){}
+  const t = todayStr();
+  if(cfg.day !== t){ cfg.day = t; cfg.today = 0; cfg.todayOK = 0; }
+}
+function saveCfg(){ try{ localStorage.setItem(KEY, JSON.stringify(cfg)); }catch(e){} }
+
+function record(ok){
+  const t = todayStr();
+  if(cfg.lastActive !== t){ cfg.days = (cfg.lastActive === yesterdayStr()) ? cfg.days+1 : 1; cfg.lastActive = t; }
+  cfg.today++; cfg.total++;
+  if(ok){ cfg.todayOK++; cfg.totalOK++; cfg.streak++; if(cfg.streak > cfg.best) cfg.best = cfg.streak; }
+  else { cfg.streak = 0; }
+  saveCfg(); paintStats();
+}
+function paintStats(){
+  document.getElementById("s-today").textContent  = cfg.today;
+  document.getElementById("s-ok").textContent     = cfg.todayOK;
+  document.getElementById("s-streak").textContent = cfg.streak;
+  const parts = [];
+  if(cfg.days > 0) parts.push(cfg.days + "日 つづけて がんばってるね！");
+  if(cfg.best > 0) parts.push("さいこう れんぞく " + cfg.best + "もん");
+  if(cfg.total > 0) parts.push("ぜんぶで " + cfg.totalOK + " / " + cfg.total + "もん せいかい");
+  document.getElementById("s-days").innerHTML = parts.join("<br>");
+}
+
+/* ==========================================================
+   4. がめん きりかえ
+   ========================================================== */
+function byId(id){ return document.getElementById(id); }
+const screens = {home:byId("home"), pick:byId("pick"), play:byId("play")};
+function show(name){
+  for(const k in screens) screens[k].classList.toggle("active", k === name);
+  if(name === "home") paintStats();
+  if(name === "play") requestAnimationFrame(fitCanvas);
+}
+function goBack(){
+  if(typeof clearFx === "function") clearFx();
+  if(window.speechSynthesis) try{ window.speechSynthesis.cancel(); }catch(e){}
+  if(screens.play.classList.contains("active")){ show(mode === "dan" ? "pick" : "home"); }
+  else show("home");
+}
+document.querySelectorAll("[data-back]").forEach(b => b.addEventListener("click", goBack));
+
+/* ==========================================================
+   5. ペン せってい UI
+   ========================================================== */
+const COLORS = [["#333333","くろ"],["#2f7bd6","あお"],["#e2445c","あか"],["#2fa36b","みどり"],["#d861b8","ピンク"],["#e08a00","オレンジ"]];
+const WIDTHS = [[5,"ほそい"],[8,"ふつう"],[14,"ふとい"]];
+function buildPenUI(){
+  const cw = byId("colors"); cw.innerHTML = "";
+  COLORS.forEach(([c,name]) => {
+    const el = document.createElement("div");
+    el.className = "sw" + (cfg.color === c ? " on" : ""); el.style.background = c; el.title = name;
+    el.addEventListener("click", () => { cfg.color = c; saveCfg(); buildPenUI(); });
+    cw.appendChild(el);
+  });
+  const ww = byId("widths"); ww.innerHTML = "";
+  WIDTHS.forEach(([w,name]) => {
+    const el = document.createElement("div");
+    el.className = "pw" + (cfg.width === w ? " on" : ""); el.title = name;
+    el.innerHTML = '<i style="width:26px;height:'+w+'px"></i>';
+    el.addEventListener("click", () => { cfg.width = w; saveCfg(); buildPenUI(); });
+    ww.appendChild(el);
+  });
+  const vb = byId("voiceBtn");
+  vb.classList.toggle("on", cfg.voice); vb.textContent = cfg.voice ? "オン" : "オフ";
+}
+byId("voiceBtn").addEventListener("click", () => { cfg.voice = !cfg.voice; saveCfg(); buildPenUI(); });
+
+/* ==========================================================
+   6. てがき キャンバス
+   ========================================================== */
+const pad = byId("pad"), pctx = pad.getContext("2d");
+let strokes = [], cur = null, drawing = false;
+
+function fitCanvas(){
+  const r = pad.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
+  if(r.width === 0 || r.height === 0) return;
+  pad.width = Math.round(r.width * dpr); pad.height = Math.round(r.height * dpr);
+  pctx.setTransform(dpr,0,0,dpr,0,0);
+  const fx = byId("fx");
+  fx.width = Math.round(r.width * dpr); fx.height = Math.round(r.height * dpr);
+  fx.getContext("2d").setTransform(dpr,0,0,dpr,0,0);
+  redraw();
+}
+function redraw(){
+  const r = pad.getBoundingClientRect();
+  pctx.clearRect(0,0,r.width,r.height);
+  pctx.lineCap = "round"; pctx.lineJoin = "round";
+  strokes.forEach(s => {
+    pctx.strokeStyle = s.c; pctx.lineWidth = s.w;
+    pctx.beginPath();
+    if(s.p.length === 1){ pctx.arc(s.p[0].x, s.p[0].y, s.w/2, 0, Math.PI*2); pctx.fillStyle = s.c; pctx.fill(); return; }
+    pctx.moveTo(s.p[0].x, s.p[0].y);
+    for(let i=1;i<s.p.length;i++) pctx.lineTo(s.p[i].x, s.p[i].y);
+    pctx.stroke();
+  });
+  byId("ph").classList.toggle("hidden", strokes.length > 0);
+}
+function pos(e){
+  const r = pad.getBoundingClientRect();
+  const t = (e.touches && e.touches[0]) ? e.touches[0] : e;
+  return {x: t.clientX - r.left, y: t.clientY - r.top};
+}
+function start(e){ e.preventDefault(); drawing = true; cur = {c:cfg.color, w:cfg.width, p:[pos(e)]}; strokes.push(cur); redraw(); }
+function move(e){ if(!drawing) return; e.preventDefault(); cur.p.push(pos(e)); redraw(); }
+function end(){ drawing = false; cur = null; }
+
+if(window.PointerEvent){
+  pad.addEventListener("pointerdown", e => { pad.setPointerCapture(e.pointerId); start(e); });
+  pad.addEventListener("pointermove", move);
+  pad.addEventListener("pointerup", end);
+  pad.addEventListener("pointercancel", end);
+}else{
+  pad.addEventListener("touchstart", start, {passive:false});
+  pad.addEventListener("touchmove", move, {passive:false});
+  pad.addEventListener("touchend", end);
+  pad.addEventListener("mousedown", start);
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", end);
+}
+function clearPad(){ strokes = []; redraw(); }
+window.addEventListener("resize", fitCanvas);
+window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 300));
+
+/* ==========================================================
+   7. よみあげ
+   ========================================================== */
+function speak(text){
+  if(!cfg.voice || !("speechSynthesis" in window)) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ja-JP"; u.rate = 0.85; u.pitch = 1.15;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ==========================================================
+   8. ごほうび えんしゅつ
+   ========================================================== */
+const fx = byId("fx"), fctx = fx.getContext("2d");
+let fxTimer = null;
+function clearFx(){
+  if(fxTimer){ cancelAnimationFrame(fxTimer); fxTimer = null; }
+  const r = pad.getBoundingClientRect();
+  fctx.clearRect(0,0,Math.max(r.width,1),Math.max(r.height,1));
+  byId("maru").classList.add("hidden");
+}
+function celebrate(){
+  const box = byId("maru");
+  box.innerHTML = '<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="80"/><circle class="c2" cx="100" cy="100" r="60"/></svg>';
+  box.classList.remove("hidden"); box.classList.remove("fade");
+  void box.offsetWidth; box.classList.add("fade");
+  setTimeout(() => box.classList.add("hidden"), 2200);
+  confetti();
+  speak("よくできました");
+}
+function confetti(){
+  const r = pad.getBoundingClientRect();
+  const cols = ["#ff7a9c","#4aa8ff","#3fc48b","#ffc53d","#a880ff"];
+  const ps = [];
+  for(let i=0;i<70;i++) ps.push({
+    x: Math.random()*r.width, y: -20 - Math.random()*r.height*0.5,
+    vx: (Math.random()-0.5)*1.6, vy: 2 + Math.random()*3.2,
+    s: 5 + Math.random()*7, a: Math.random()*Math.PI, va:(Math.random()-0.5)*0.3,
+    c: cols[i % cols.length]
+  });
+  const t0 = performance.now();
+  if(fxTimer) cancelAnimationFrame(fxTimer);
+  (function loop(t){
+    fctx.clearRect(0,0,r.width,r.height);
+    ps.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.a += p.va;
+      fctx.save(); fctx.translate(p.x,p.y); fctx.rotate(p.a);
+      fctx.fillStyle = p.c; fctx.fillRect(-p.s/2, -p.s/2, p.s, p.s*0.6); fctx.restore();
+    });
+    if(t - t0 < 2200) fxTimer = requestAnimationFrame(loop);
+    else fctx.clearRect(0,0,r.width,r.height);
+  })(t0);
+}
+
+/* ==========================================================
+   9. 出題ロジック
+   ========================================================== */
+let mode = "dan";       // dan | rand | word
+let queue = [];         // [{a,b,text?}]
+let idx = 0, okCount = 0, answered = false, selfDone = false, randCount = 0;
+
+function shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+byId("home").addEventListener("click", e => {
+  const b = e.target.closest("[data-go]"); if(!b) return;
+  const go = b.dataset.go;
+  if(go === "rand"){ mode = "rand"; startRandom(); }
+  else if(go === "word"){ mode = "word"; startWord(); }
+  else { mode = go; openPicker(); }
+});
+
+function openPicker(){
+  byId("pick-title").textContent = "なんの だんを れんしゅうする？";
+  const g = byId("dangrid"); g.innerHTML = "";
+  const colors = ["pink","blue","green","yellow","purple"];
+  for(let n=1;n<=9;n++){
+    const b = document.createElement("button");
+    b.className = "btn " + colors[(n-1) % colors.length];
+    b.textContent = n + "の だん";
+    b.addEventListener("click", () => startDan(n));
+    g.appendChild(b);
+  }
+  const all = document.createElement("button");
+  all.className = "btn ghost wide"; all.textContent = "ぜんぶの だんから 10もん";
+  all.addEventListener("click", () => startDan(0));
+  g.appendChild(all);
+  show("pick");
+}
+
+const WORD_SET_SIZE = 10;
+
+function startDan(n){
+  if(n === 0){
+    const all = []; for(let a=1;a<=9;a++) for(let b=1;b<=9;b++) all.push({a:a,b:b});
+    queue = shuffle(all).slice(0,10);
+    byId("modeLabel").textContent = "ぜんぶの だん";
+  }else{
+    queue = []; for(let b=1;b<=9;b++) queue.push({a:n, b:b});
+    byId("modeLabel").textContent = n + "の だん";
+  }
+  idx = 0; okCount = 0; startPlay();
+}
+
+/* 九九問題：だんも かけるかずも ランダム */
+function startWord(){
+  queue = makeWordSet(WORD_SET_SIZE);
+  byId("modeLabel").textContent = "九九問題";
+  idx = 0; okCount = 0; startPlay();
+}
+
+function startRandom(){
+  queue = []; randCount = 0; idx = 0; okCount = 0;
+  byId("modeLabel").textContent = "ランダム";
+  pushRandom(); startPlay();
+}
+function pushRandom(){
+  let q, last = queue[queue.length-1];
+  do { q = {a: 1+(Math.random()*9|0), b: 1+(Math.random()*9|0)}; }
+  while(last && last.a === q.a && last.b === q.b);
+  queue.push(q);
+}
+
+function startPlay(){ show("play"); byId("doneBox").classList.add("hidden"); render(); }
+
+function render(){
+  const q = queue[idx];
+  answered = false; selfDone = false;
+  clearPad(); clearFx();
+  byId("answerBox").classList.add("hidden");
+  byId("selfBox").classList.add("hidden");
+  byId("btnCheck").classList.remove("hidden");
+  byId("btnNext").classList.remove("hidden");
+
+  byId("progNum").textContent = idx + 1;
+  byId("progTot").textContent = (mode === "rand") ? "∞" : queue.length;
+  byId("okNum").textContent = okCount;
+
+  const box = byId("qbox");
+  if(q.text){
+    box.innerHTML = '<div class="qtext">' + q.text + '</div><div class="qhint">しきを かんがえて、こたえを かこう</div>';
+  }else{
+    box.innerHTML = '<div class="qmath">' + q.a + ' × ' + q.b + ' <span class="eq">=</span> ?</div>';
+    speak(NUM_YOMI[q.a] + " かける " + NUM_YOMI[q.b] + " は？");
+  }
+  requestAnimationFrame(fitCanvas);
+}
+
+/* --- こたえあわせ --- */
+byId("btnCheck").addEventListener("click", () => {
+  if(answered) return;
+  answered = true;
+  const q = queue[idx], ans = q.a * q.b, read = KUKU_READ[q.a-1][q.b-1];
+  const ab = byId("answerBox");
+  ab.innerHTML =
+    (q.text ? '<div class="shiki">しき： ' + q.a + ' × ' + q.b + '</div>' : '') +
+    '<div class="big">こたえは ' + ans + '</div>' +
+    '<div class="read">' + read + '</div>' +
+    '<button class="speak" id="btnSpeak">🔊 もういちど きく</button>';
+  ab.classList.remove("hidden");
+  byId("selfBox").classList.remove("hidden");
+  byId("btnCheck").classList.add("hidden");
+  byId("btnSpeak").addEventListener("click", () => speak(read));
+  speak(read);
+});
+
+byId("btnClear").addEventListener("click", clearPad);
+
+byId("btnOK").addEventListener("click", () => finishSelf(true));
+byId("btnNG").addEventListener("click", () => finishSelf(false));
+function finishSelf(ok){
+  if(selfDone) return; selfDone = true;
+  if(ok) okCount++;
+  record(ok);
+  byId("okNum").textContent = okCount;
+  byId("selfBox").classList.add("hidden");
+  if(ok) celebrate(); else speak("つぎは できるよ");
+}
+
+byId("btnNext").addEventListener("click", () => {
+  if(mode === "rand"){ pushRandom(); idx++; render(); return; }
+  if(idx + 1 >= queue.length){ finishSet(); return; }
+  idx++; render();
+});
+
+function finishSet(){
+  const total = queue.length;
+  const box = byId("doneBox");
+  const msg = (okCount === total) ? "ぜんもん せいかい！すごい！" :
+              (okCount >= total*0.7) ? "よく がんばりました！" : "つづけたら きっと できるよ！";
+  box.innerHTML = '<h3>おつかれさま！</h3><p>' + total + 'もん ちゅう <b>' + okCount + 'もん</b> せいかい<br>' + msg + '</p>' +
+    '<button class="btn pink" id="againBtn">もういちど</button>' +
+    '<button class="btn ghost" id="menuBtn">メニューへ</button>';
+  box.classList.remove("hidden");
+  byId("againBtn").addEventListener("click", () => {
+    idx = 0; okCount = 0;
+    queue = (mode === "word") ? makeWordSet(WORD_SET_SIZE) : shuffle(queue);
+    box.classList.add("hidden"); render();
+  });
+  byId("menuBtn").addEventListener("click", () => { box.classList.add("hidden"); show("home"); });
+  if(okCount === total) confetti();
+  speak(total + "もんちゅう " + okCount + "もん せいかい。" + msg);
+}
+
+/* ==========================================================
+   10. きどう
+   ========================================================== */
+loadCfg(); buildPenUI(); paintStats();
+document.addEventListener("gesturestart", e => e.preventDefault());
+</script>
+</body>
+</html>
